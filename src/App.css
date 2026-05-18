@@ -1,0 +1,124 @@
+:root {
+  --bg-color: #0d0d0d; /* Fondo aún más oscuro y profundo */
+  --text-color: #a0a0a0;
+  --sidebar-bg: #151515;
+  --accent-color: #ffffff; /* Blanco puro para las formas abstractas */
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+}
+
+/* --- LA CAPA DE FOCO (Overlay) --- */
+.focus-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  /* El efecto oscuro y el desenfoque del fondo */
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 5; /* Por encima del editor, pero debajo del panel */
+  cursor: pointer; /* Indica que se puede clickear para salir */
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- PANEL LATERAL --- */
+.sidebar {
+  background-color: var(--sidebar-bg);
+  width: 280px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10; /* Por encima del overlay */
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.sidebar.closed {
+  transform: translateX(-100%);
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-content {
+  padding: 40px;
+}
+
+/* --- EL BOTÓN ABSTRACTO --- */
+.abstract-toggle {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px; /* Área de clic invisible más grande */
+  z-index: 4;
+  opacity: 0.4;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.abstract-toggle:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* --- LAS FORMAS GEOMÉTRICAS --- */
+/* El "guion grueso redondeado" que querías */
+.shape-dash {
+  width: 24px;
+  height: 8px;
+  background-color: var(--accent-color);
+  border-radius: 8px; /* Bordes extremadamente redondeados */
+}
+
+/* Un cuadrado suave para adornar el menú interno */
+.shape-square {
+  width: 16px;
+  height: 16px;
+  background-color: var(--text-color);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+/* --- EDITOR --- */
+.editor-container {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.editor-content {
+  width: 100%;
+  max-width: 800px;
+  padding: 80px 20px;
+}
