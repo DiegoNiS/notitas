@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { GlobalOverlay } from './GlobalOverlay';
-import { useKeyboardModifiers } from '../hooks/useKeyboard';
-import { NewCourseModal } from './NewCourseModal';
+import { GlobalOverlay } from '../components/GlobalOverlay';
+import { useKeysHeld } from '../keyboard/useKeysHeld';
+import { NewCourseModal } from '../components/NewCourseModal';
 import { CursoDetalle } from '../services/database';
 
 interface DashboardProps {
@@ -11,7 +11,8 @@ interface DashboardProps {
 }
 
 export function Dashboard({ cursos, onRecargar, onSelectCurso }: DashboardProps) {
-  const { isAltShiftPressed } = useKeyboardModifiers();
+  //const { isAltShiftPressed } = useKeyboardModifiers();
+  const isAltShiftPressed = useKeysHeld({ alt: true, shift: true });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [focusedIndex, setFocusedIndex] = useState<number>(-1); 

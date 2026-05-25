@@ -1,44 +1,39 @@
+// Ruta: src/components/Sidebar.tsx
 import { useEffect } from 'react';
-import { useKeyboardModifiers } from '../hooks/useKeyboard'; // Importamos la magia
+import { useKeysHeld } from '../keyboard/useKeysHeld'; // <-- Hook generalizado
+import { ShortcutManager } from '../keyboard/ShortcutManager'; // <-- Manager central
 import { CursoDetalle } from '../services/database';
 
 interface SidebarProps {
   isOpen: boolean;
-}
-
-interface SidebarProps {
-  isOpen: boolean;
   cursos: CursoDetalle[];
-  onSelectCurso: (id: string) => void; // <--- Nueva Prop
+  onSelectCurso: (id: string) => void;
 }
 
 export function Sidebar({ isOpen, cursos, onSelectCurso }: SidebarProps) {
-  // 1. Usamos el Hook de forma súper limpia
-  const { isAltShiftPressed } = useKeyboardModifiers();
+  // 1. Usamos el Hook genérico pidiendo exactamente lo que necesitamos
+  const isAltShiftPressed = useKeysHeld({ alt: true, shift: true });
 
-  // Escuchamos el teclado solo si el Sidebar está abierto
+  // 2. Usamos el ShortcutManager en lugar de listeners crudos
   useEffect(() => {
     if (!isOpen) return;
     
-    const handleLocalKey = (e: KeyboardEvent) => {
-      // Capturamos teclas físicas (Digit1, Digit2... o Numpad1...)
-      const isNumberKey = e.code.startsWith('Digit') || e.code.startsWith('Numpad');
-      
-      if (e.altKey && e.shiftKey && isNumberKey) {
-        e.preventDefault();
-        
-        // Extraemos el número del texto "Digit1" o "Numpad1"
-        const numero = parseInt(e.code.replace('Digit', '').replace('Numpad', ''), 10);
-        const index = numero - 1;
-        
-        if (index >= 0 && index < cursos.length) {
-          onSelectCurso(cursos[index].id); // ¡Viaje directo!
+    ShortcutManager.registerGroup('sidebar', [
+      {
+        codeMatcher: (code) => code.startsWith('Digit') || code.startsWith('Numpad'),
+        altKey: true, 
+        shiftKey: true,
+        action: (e) => {
+          const numero = parseInt(e.code.replace('Digit', '').replace('Numpad', ''), 10);
+          const index = numero - 1;
+          if (index >= 0 && index < cursos.length) {
+            onSelectCurso(cursos[index].id); 
+          }
         }
       }
-    };
-    
-    document.addEventListener('keydown', handleLocalKey);
-    return () => document.removeEventListener('keydown', handleLocalKey);
+    ]);
+
+    return () => ShortcutManager.unregisterGroup('sidebar');
   }, [isOpen, cursos, onSelectCurso]);
 
   return (
@@ -55,7 +50,7 @@ export function Sidebar({ isOpen, cursos, onSelectCurso }: SidebarProps) {
             <div key={curso.id} className="course-item">
               <div className="course-header" title={curso.nombre}>
                 
-                {/* 2. Ahora depende de Alt + Shift */}
+                {/* Indicador visual dependiente del estado del teclado */}
                 {isOpen && isAltShiftPressed && (
                   <div className="shortcut-hint">{index + 1}</div>
                 )}
@@ -65,7 +60,11 @@ export function Sidebar({ isOpen, cursos, onSelectCurso }: SidebarProps) {
               </div>
 
               <div className="ambiente-list">
-                {/* ... código de ambientes intacto ... */}
+                {curso.ambientes.map((ambiente) => (
+                  <div key={ambiente} className="ambiente-item">
+                    {ambiente}
+                  </div>
+                ))}
               </div>
             </div>
           ))}
