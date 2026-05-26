@@ -15,7 +15,7 @@ interface NavHostProps {
 export function NavHost({ currentRoute, cursos, onRecargarCursos, navigateTo, navigateBack }: NavHostProps) {
     switch (currentRoute.type) {
         case 'welcome':
-            return <WelcomeScreen />;
+            return <WelcomeScreen navigateTo={navigateTo} />;
         case 'dashboard':
             return (
                 <Dashboard
@@ -30,10 +30,11 @@ export function NavHost({ currentRoute, cursos, onRecargarCursos, navigateTo, na
                 <CourseView
                     curso={cursoActivo}
                     onBack={navigateBack}
+                    navigateTo={navigateTo}
                 />
             );
         }
         default:
-            return <WelcomeScreen />;
+            return <WelcomeScreen navigateTo={navigateTo} />;
     }
 }

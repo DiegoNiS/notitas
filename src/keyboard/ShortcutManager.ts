@@ -21,7 +21,7 @@ export class ShortcutManager {
         if (this.globalListener) return;
 
         this.globalListener = (e: KeyboardEvent) => {
-            for(const [groupId, shortcuts] of this.groups.entries()) {
+            for(const [, shortcuts] of this.groups.entries()) {
                 for (const config of shortcuts) {
                     const matchCode = config.code
                         ? e.code === config.code

@@ -1,14 +1,14 @@
-// Ruta: src/components/WelcomeScreen.tsx
-import { useEffect, useState } from 'react';
-import { db } from '../services/database';
+// Ruta: src/screens/WelcomeScreen.tsx
+import { useWelcomeScreenViewModel } from '../viewmodels/useWelcomeScreenViewModel';
+import { AppRoute } from '../navigation/types';
 
-export function WelcomeScreen() {
-  const [nombreUsuario, setNombreUsuario] = useState('...');
+interface WelcomeScreenProps {
+  navigateTo: (route: AppRoute) => void;
+}
 
-  useEffect(() => {
-    // Al cargar la pantalla, consultamos la DB
-    db.obtenerUsuario().then(data => setNombreUsuario(data.nombre));
-  }, []);
+export function WelcomeScreen({ navigateTo }: WelcomeScreenProps) {
+  const { nombreUsuario } = useWelcomeScreenViewModel(navigateTo);
+
 
   return (
     <div className="view-container fade-enter welcome-container">

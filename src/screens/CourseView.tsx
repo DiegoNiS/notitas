@@ -1,22 +1,18 @@
-// Ruta: src/components/CourseView.tsx
-import { useEffect } from 'react';
+// Ruta: src/screens/CourseView.tsx
+import { useCourseViewViewModel } from '../viewmodels/useCourseViewViewModel';
 import { CursoDetalle } from '../services/database';
+import { AppRoute } from '../navigation/types';
 
 interface CourseViewProps {
   curso: CursoDetalle | null;
-  onBack: () => void; // Función para regresar al Dashboard
+  onBack: () => void; // Function to go back to Dashboard
+  navigateTo: (route: AppRoute) => void; // Function to navigate to other routes
 }
 
-export function CourseView({ curso, onBack }: CourseViewProps) {
+export function CourseView({ curso, onBack, navigateTo }: CourseViewProps) {
   
-  // Atajo local: Escape para salir rápidamente al Dashboard
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' || e.key === 'Esc') onBack();
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onBack]);
+  // Usamos el ViewModel para registrar los atajos de teclado y lógica correspondientes
+  useCourseViewViewModel(curso?.id || null, onBack, navigateTo);
 
   if (!curso) return <div className="view-container">Cargando curso...</div>;
 

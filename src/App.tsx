@@ -10,7 +10,7 @@ import './App.css';
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);  
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
-  const [switcherIndex, setSwitcherIndex] = useState(0);
+  const switcherIndex = 0;
   const [cursos, setCursos] = useState<CursoDetalle[]>([]);
 
   //Inicializamos nuestro NavHost Controller nativo
