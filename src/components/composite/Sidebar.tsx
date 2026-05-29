@@ -1,20 +1,51 @@
-// Ruta: src/components/Sidebar.tsx
-import { useEffect } from 'react';
-import { useKeysHeld } from '../keyboard/useKeysHeld'; // <-- Hook generalizado
-import { ShortcutManager } from '../keyboard/ShortcutManager'; // <-- Manager central
-import { CursoDetalle } from '../services/database';
+// Ruta: src/components/composite/Sidebar.tsx
+import { useEffect, useRef } from 'react';
+import { useKeysHeld } from '../../keyboard/useKeysHeld';
+import { ShortcutManager } from '../../keyboard/ShortcutManager';
+import { CursoDetalle } from '../../services/database';
+import { useOverlay } from '../../context/OverlayContext';
 
 interface SidebarProps {
   isOpen: boolean;
+  onClose: () => void;
   cursos: CursoDetalle[];
   onSelectCurso: (id: string) => void;
 }
 
-export function Sidebar({ isOpen, cursos, onSelectCurso }: SidebarProps) {
-  // 1. Usamos el Hook genérico pidiendo exactamente lo que necesitamos
+export function Sidebar({ isOpen, onClose, cursos, onSelectCurso }: SidebarProps) {
   const isAltShiftPressed = useKeysHeld({ alt: true, shift: true });
+  const { showOverlay, hideOverlay } = useOverlay();
 
-  // 2. Usamos el ShortcutManager en lugar de listeners crudos
+  // Guardamos la última función onClose en un ref para evitar que cambie la dependencia del effect
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Controlar de forma autónoma el overlay difuminado
+  useEffect(() => {
+    if (isOpen) {
+      const stableOnClose = () => {
+        if (onCloseRef.current) {
+          onCloseRef.current();
+        }
+      };
+
+      // Registramos la capa del fondo con zIndex 5
+      const success = showOverlay(5, stableOnClose);
+      if (!success) {
+        if (onCloseRef.current) {
+          onCloseRef.current();
+        }
+      }
+    }
+
+    return () => {
+      if (isOpen) {
+        hideOverlay();
+      }
+    };
+  }, [isOpen]);
+
+  // Usamos el ShortcutManager en lugar de listeners crudos
   useEffect(() => {
     if (!isOpen) return;
     
@@ -30,6 +61,10 @@ export function Sidebar({ isOpen, cursos, onSelectCurso }: SidebarProps) {
             onSelectCurso(cursos[index].id); 
           }
         }
+      },
+      {
+        code: 'Escape',
+        action: () => onClose()
       }
     ]);
 

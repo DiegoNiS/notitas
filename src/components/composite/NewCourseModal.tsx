@@ -1,7 +1,7 @@
-// Ruta: src/components/NewCourseModal.tsx
-import { useFocusTrap } from '../keyboard/useFocusTrap';
-import { GlobalOverlay } from './GlobalOverlay';
-import { useNewCourseViewModel } from '../viewmodels/useNewCourseViewModel';
+// Ruta: src/components/composite/NewCourseModal.tsx
+import { useFocusTrap } from '../../keyboard/useFocusTrap';
+import { GlobalOverlay } from '../core/GlobalOverlay';
+import { useNewCourseViewModel } from '../../viewmodels/useNewCourseViewModel';
 
 interface NewCourseModalProps {
   isOpen: boolean;
@@ -23,11 +23,9 @@ export function NewCourseModal({ isOpen, onClose, onSuccess }: NewCourseModalPro
       <div className="modal-content" ref={modalRef}>
         
         <div className="modal-header">
-          <div className="shape-plus" style={{ width: '16px', height: '16px', opacity: 0.5 }}></div>
           <h3 className="brand-text">NUEVO CURSO</h3>
+          <div className="shape-dash" style={{ width: '30px' }}></div>
         </div>
-        
-        <div className="shape-dash" style={{ marginBottom: '25px', width: '30px' }}></div>
 
         <form className="minimal-form" onSubmit={vm.handleSubmit}>
           

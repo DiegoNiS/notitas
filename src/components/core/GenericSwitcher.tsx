@@ -1,4 +1,4 @@
-// Ruta: src/components/GenericSwitcher.tsx
+// Ruta: src/components/core/GenericSwitcher.tsx
 import { ReactNode } from 'react';
 import { GlobalOverlay } from './GlobalOverlay';
 

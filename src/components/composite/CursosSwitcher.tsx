@@ -1,34 +1,33 @@
-// Ruta: src/components/QuickSwitcher.tsx
-import { CursoDetalle } from '../services/database';
-import { GenericSwitcher } from './GenericSwitcher';
+// Ruta: src/components/composite/CursosSwitcher.tsx
+import { GenericSwitcher } from '../core/GenericSwitcher';
+import { CursoDetalle } from '../../services/database';
 
-interface QuickSwitcherProps {
+interface CursosSwitcherProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedIndex: number;
   cursos: CursoDetalle[];
-  onSelectCurso: (cursoId: string) => void; // <--- NUEVA PROP: La acción a ejecutar
+  onSelectCurso: (id: string) => void;
+  selectedIndex: number;
 }
 
-export function QuickSwitcher({ isOpen, onClose, selectedIndex, cursos, onSelectCurso }: QuickSwitcherProps) {
-  
+export function CursosSwitcher({ isOpen, onClose, cursos, onSelectCurso, selectedIndex }: CursosSwitcherProps) {
+
   return (
     <GenericSwitcher
       isOpen={isOpen}
       onClose={onClose}
-      title="NAVEGADOR RÁPIDO"
+      title="NAVEGADOR DE CURSOS"
       items={cursos}
       selectedIndex={selectedIndex}
       renderItem={(curso, isSelected) => (
         <div 
           key={curso.id} 
           className={`switcher-item ${isSelected ? 'selected' : ''}`}
-          // NUEVO: Al hacer clic, ejecuta la acción y cierra el modal
           onClick={() => {
             onSelectCurso(curso.id);
             onClose();
           }}
-          style={{ cursor: 'pointer' }} // Un pequeño fix visual
+          style={{ cursor: 'pointer' }}
         >
           <span className="switcher-abbr">{curso.abreviatura}</span>
           <span className="switcher-name">{curso.nombre}</span>

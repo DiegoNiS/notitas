@@ -4,13 +4,19 @@ import { ShortcutManager } from '../keyboard/ShortcutManager';
 import { useKeysHeld } from '../keyboard/useKeysHeld';
 import { CursoDetalle } from '../services/database';
 import { ShortcutConfig } from '../keyboard/types';
+import { useCtrlTabSwitcher } from '../keyboard/useCtrlTabSwitcher';
 
 export function useDashboardViewModel(
   cursos: CursoDetalle[],
-  onRecargar: () => void,
   onSelectCurso: (cursoId: string) => void
 ) {
   const isAltShiftPressed = useKeysHeld({ alt: true, shift: true });
+
+  const switcher = useCtrlTabSwitcher({
+    items: cursos,
+    onSelect: (curso) => onSelectCurso(curso.id)
+  });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -95,14 +101,14 @@ export function useDashboardViewModel(
           }
         },
         {
-          codeMatcher: (code) => code === 'ArrowRight' || code === 'ArrowLeft',
+          codeMatcher: (code) => code === 'ArrowDown' || code === 'ArrowUp',
           action: (e) => {
             e.preventDefault();
             if (selectedIds.size > 0) {
               setSelectedIds(new Set());
               setSelectionAnchor(null);
             }
-            if (e.code === 'ArrowRight') {
+            if (e.code === 'ArrowDown') {
               setFocusedIndex(prev => Math.min(prev + 1, cursos.length - 1));
             } else {
               setFocusedIndex(prev => Math.max(prev - 1, -1));
@@ -110,14 +116,14 @@ export function useDashboardViewModel(
           }
         },
         {
-          codeMatcher: (code) => code === 'ArrowRight' || code === 'ArrowLeft',
+          codeMatcher: (code) => code === 'ArrowDown' || code === 'ArrowUp',
           ctrlKey: true,
           shiftKey: true,
           action: (e) => {
             e.preventDefault();
             const currentAnchor = selectionAnchor !== null ? selectionAnchor : (focusedIndex >= 0 ? focusedIndex : 0);
             setSelectionAnchor(currentAnchor);
-            const newFocus = e.code === 'ArrowRight' 
+            const newFocus = e.code === 'ArrowDown' 
               ? Math.min(focusedIndex + 1, cursos.length - 1) 
               : Math.max(focusedIndex - 1, 0);
             setFocusedIndex(newFocus);
@@ -164,6 +170,7 @@ export function useDashboardViewModel(
     setIsMenuOpen,
     menuOptionIndex,
     setMenuOptionIndex,
-    OPCIONES_MENU
+    OPCIONES_MENU,
+    switcher
   };
 }

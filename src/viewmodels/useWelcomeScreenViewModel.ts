@@ -2,12 +2,20 @@
 import { useState, useEffect } from 'react';
 import { ShortcutManager } from '../keyboard/ShortcutManager';
 import { AppRoute } from '../navigation/types';
-import { db } from '../services/database';
+import { db, CursoDetalle } from '../services/database';
+import { useCtrlTabSwitcher } from '../keyboard/useCtrlTabSwitcher';
 
 export function useWelcomeScreenViewModel(
+    cursos: CursoDetalle[],
     navigateTo: (route: AppRoute) => void
 ) {
     const [nombreUsuario, setNombreUsuario] = useState<string>('...');
+
+    // Instanciar el switcher para navegar directo a cursos
+    const switcher = useCtrlTabSwitcher({
+        items: cursos,
+        onSelect: (curso) => navigateTo({ type: 'course', courseId: curso.id })
+    });
 
     // Cargar datos iniciales
     useEffect(() => {
@@ -26,10 +34,7 @@ export function useWelcomeScreenViewModel(
                     navigateTo({ type: 'dashboard' });
                 },
                 description: 'Navigate to Dashboard'
-            },
-            // Ir al Menú Principal (Sidebar) con Ctrl + B
-            // Este atajo ya está registrado globalmente en App.tsx, así que no es necesario duplicarlo aquí.
-            // Si quisieras un atajo específico para esta vista, lo registrarías aquí.
+            }
         ]);
 
         return () => {
@@ -39,7 +44,6 @@ export function useWelcomeScreenViewModel(
 
     return {
         nombreUsuario,
-        // Podríamos exponer aquí métodos si hubiera acciones específicas desde la vista,
-        // como un handleStartClick() que llame a navigateTo({ type: 'dashboard' })
+        switcher
     };
 }
