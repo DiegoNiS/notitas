@@ -2,23 +2,41 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShortcutManager } from '../keyboard/ShortcutManager';
 import { db, TareaDetail, Nota, updateTaskStateInMarkdown } from '../services/database';
+import { useCtrlTabSwitcher } from '../keyboard/useCtrlTabSwitcher';
 
 const lastFocusedCache: Record<string, string> = {};
 
 export function useNoteEditorViewModel(
     notaId: string,
-    onBack: () => void
+    onBack: () => void,
+    navigateTo: (route: any) => void
 ) {
     const [note, setNote] = useState<Nota | null>(null);
+    const [notesInEnv, setNotesInEnv] = useState<Nota[]>([]);
     const [markdown, setMarkdown] = useState('');
     const [mode, setMode] = useState<'editor' | 'tasks'>('editor');
     const [tareas, setTareas] = useState<TareaDetail[]>([]);
     const [activeTaskIndex, setActiveTaskIndex] = useState(0);
     const [isCreatingTask, setIsCreatingTask] = useState(false);
+    const [savingStatus, setSavingStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+    const [toasts, setToasts] = useState<{ id: string; title: string; description: string }[]>([]);
+    const [isLineWrapping, setIsLineWrapping] = useState(true);
 
-    // Guardamos referencias para los handlers globales
-    const stateRef = useRef({ mode, markdown, isCreatingTask });
-    stateRef.current = { mode, markdown, isCreatingTask };
+    // Toast helper
+    const showToast = (title: string, description: string) => {
+        const id = Math.random().toString(36).substring(2, 9);
+        setToasts(prev => [...prev, { id, title, description }]);
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 4000);
+    };
+
+    const lastMarkdownRef = useRef(markdown);
+    const saveTimeoutRef = useRef<any>(null);
+
+    // Guardamos referencias para los handlers globales, cleanup y savingStatus
+    const stateRef = useRef({ mode, markdown, isCreatingTask, savingStatus });
+    stateRef.current = { mode, markdown, isCreatingTask, savingStatus };
 
     // Cargar la nota y sus tareas asociadas
     const cargarNotaYTareas = async () => {
@@ -27,8 +45,13 @@ export function useNoteEditorViewModel(
         if (loadedNote) {
             setNote(loadedNote);
             setMarkdown(loadedNote.contenido);
+            lastMarkdownRef.current = loadedNote.contenido;
             const loadedTareas = await db.obtenerTareasPorNota(notaId);
             setTareas(loadedTareas);
+            
+            // Cargar notas hermanas del mismo ambiente para el switcher
+            const siblingNotes = await db.obtenerNotasPorCursoAmbiente(loadedNote.curso_id, loadedNote.ambiente_id);
+            setNotesInEnv(siblingNotes);
         }
     };
 
@@ -38,12 +61,17 @@ export function useNoteEditorViewModel(
 
     // Alternar modos (Editor <-> Tareas)
     const toggleMode = () => {
+        // Guardar inmediatamente si hay cambios sin guardar antes de cambiar a Tareas
+        if (stateRef.current.savingStatus === 'unsaved') {
+            persistChanges(lastMarkdownRef.current);
+        }
+
         setMode(prev => {
             const next = prev === 'editor' ? 'tasks' : 'editor';
             // Enfocar correspondientemente tras el cambio
             if (next === 'editor') {
                 setTimeout(() => {
-                    document.getElementById('markdown-editor')?.focus();
+                    (document.querySelector('.markdown-editor-codemirror .cm-content') as HTMLElement)?.focus();
                 }, 100);
             } else {
                 setTimeout(() => {
@@ -55,10 +83,31 @@ export function useNoteEditorViewModel(
         });
     };
 
-    // Guardar cambios del Markdown e indexar tareas
-    const handleMarkdownChange = async (newVal: string) => {
-        setMarkdown(newVal);
-        await db.sincronizarTareasDeNota(notaId, newVal);
+    // Switcher para navegar entre notas (solo activo en modo editor)
+    const switcher = useCtrlTabSwitcher({
+        items: mode === 'editor' ? notesInEnv : [],
+        onSelect: (nota) => {
+            if (stateRef.current.savingStatus === 'unsaved') {
+                db.sincronizarTareasDeNota(notaId, lastMarkdownRef.current);
+            }
+            navigateTo({
+                type: 'editor',
+                courseId: note?.curso_id || '',
+                ambienteId: note?.ambiente_id || '',
+                notaId: nota.id
+            });
+        }
+    });
+
+    // Guardar cambios a la base de datos de manera inmediata
+    const persistChanges = async (content: string) => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+        }
+        setSavingStatus('saving');
+        
+        await db.sincronizarTareasDeNota(notaId, content);
         const loadedTareas = await db.obtenerTareasPorNota(notaId);
         setTareas(loadedTareas);
         
@@ -67,6 +116,23 @@ export function useNoteEditorViewModel(
         if (loadedNote) {
             setNote(loadedNote);
         }
+        
+        setSavingStatus('saved');
+    };
+
+    // Guardar cambios del Markdown (local y en cola de autoguardado a 1 minuto)
+    const handleMarkdownChange = async (newVal: string) => {
+        setMarkdown(newVal);
+        lastMarkdownRef.current = newVal;
+        setSavingStatus('unsaved');
+        
+        // Temporizador de 1 minuto para autoguardado (Debounce)
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(() => {
+            persistChanges(lastMarkdownRef.current);
+        }, 60000);
     };
 
     // Agregar tarea inyectándola al final del Markdown de la nota
@@ -76,31 +142,50 @@ export function useNoteEditorViewModel(
         const taskLine = `\n:Tarea [ ] ${descripcion}${dateSuffix}`;
         const newMarkdown = `${cleanMarkdown}${taskLine}\n`;
         
-        await handleMarkdownChange(newMarkdown);
+        setMarkdown(newMarkdown);
+        lastMarkdownRef.current = newMarkdown;
+        await persistChanges(newMarkdown);
         setIsCreatingTask(false);
+        showToast("TAREA CREADA", descripcion);
         
         // Enfocar la tarea agregada (que es la última de la lista)
         setTimeout(() => {
-            const lastIndex = tareas.length; // la nueva tarea estará al final
+            const lastIndex = tareas.length + 1; // la nueva tarea estará al final (índice 0 es el botón de creación)
             setActiveTaskIndex(lastIndex);
             const elementId = `editor-task-${lastIndex}`;
             document.getElementById(elementId)?.focus();
         }, 150);
     };
 
-    // Cambiar el estado de una tarea y sincronizarlo al Markdown
+    // Cambiar el estado de una tarea y sincronizarlo al Markdown de forma inmediata
     const toggleTaskStatus = async (task: TareaDetail) => {
         let nuevoEstado: 'incomplete' | 'in_progress' | 'completed';
+        let actionTitle = '';
+        const shortDesc = task.descripcion.length > 25 ? task.descripcion.substring(0, 25) + '...' : task.descripcion;
+        
         if (task.estado === 'incomplete') {
             nuevoEstado = 'in_progress';
+            actionTitle = "TAREA INICIADA";
         } else if (task.estado === 'in_progress') {
             nuevoEstado = 'completed';
+            actionTitle = "TAREA COMPLETADA";
         } else {
             nuevoEstado = 'incomplete';
+            actionTitle = "TAREA PENDIENTE";
         }
 
         const newMarkdown = updateTaskStateInMarkdown(markdown, task.descripcion, nuevoEstado);
-        await handleMarkdownChange(newMarkdown);
+        setMarkdown(newMarkdown);
+        lastMarkdownRef.current = newMarkdown;
+        await persistChanges(newMarkdown);
+        showToast(actionTitle, shortDesc);
+    };
+
+    const handleBack = () => {
+        if (stateRef.current.savingStatus === 'unsaved') {
+            persistChanges(lastMarkdownRef.current);
+        }
+        onBack();
     };
 
     // Atajos de teclado para la vista del editor
@@ -113,8 +198,19 @@ export function useNoteEditorViewModel(
                 action: (e) => { 
                     e.preventDefault(); 
                     toggleMode(); 
-                } 
+                },
+                description: 'Alternar entre editor y tareas asociadas'
             },
+            { 
+                code: 'KeyM', 
+                altKey: true, 
+                action: (e) => { 
+                    e.preventDefault(); 
+                    toggleMode(); 
+                },
+                description: 'Alternar entre editor y tareas asociadas'
+            },
+
             // Escape o Alt + Left: Regresar
             { 
                 code: 'Escape', 
@@ -122,16 +218,18 @@ export function useNoteEditorViewModel(
                     // Si se está editando una tarea en modal, no cerrar la vista
                     if (stateRef.current.isCreatingTask) return;
                     e.preventDefault(); 
-                    onBack(); 
-                } 
+                    handleBack(); 
+                },
+                description: 'Regresar a la pantalla anterior (guardando cambios)'
             },
             { 
                 code: 'ArrowLeft', 
                 altKey: true, 
                 action: (e) => { 
                     e.preventDefault(); 
-                    onBack(); 
-                } 
+                    handleBack(); 
+                },
+                description: 'Regresar a la pantalla anterior (guardando cambios)'
             },
             // Ctrl + N: Solo en modo Tareas para inyectar tarea
             {
@@ -142,7 +240,33 @@ export function useNoteEditorViewModel(
                         e.preventDefault();
                         setIsCreatingTask(true);
                     }
-                }
+                },
+                description: 'Crear nueva tarea (solo en modo tareas)'
+            },
+            // Ctrl + S: Guardar cambios inmediatamente
+            {
+                code: 'KeyS',
+                ctrlKey: true,
+                action: (e) => {
+                    e.preventDefault();
+                    persistChanges(lastMarkdownRef.current);
+                    showToast("NOTA GUARDADA", "Los cambios han sido guardados manualmente.");
+                },
+                description: 'Guardar cambios inmediatamente'
+            },
+            // Alt + Z: Alternar ajuste de línea (Word Wrap)
+            {
+                code: 'KeyZ',
+                altKey: true,
+                action: (e) => {
+                    e.preventDefault();
+                    setIsLineWrapping(prev => {
+                        const next = !prev;
+                        showToast("AJUSTE DE LÍNEA", next ? "ACTIVADO (WORD WRAP)" : "DESACTIVADO (SIN AJUSTE)");
+                        return next;
+                    });
+                },
+                description: 'Activar/Desactivar ajuste automático de línea (Word Wrap)'
             }
         ]);
 
@@ -150,6 +274,32 @@ export function useNoteEditorViewModel(
             ShortcutManager.unregisterGroup('noteEditorView');
         };
     }, [onBack, markdown, mode, note]);
+
+    // Cleanup y guardado forzado al desmontar
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+            if (stateRef.current.savingStatus === 'unsaved') {
+                db.sincronizarTareasDeNota(notaId, lastMarkdownRef.current);
+            }
+        };
+    }, [notaId]);
+
+    // Restaurar foco al montar o al cambiar de modo
+    useEffect(() => {
+        if (!note) return;
+        const timer = setTimeout(() => {
+            if (stateRef.current.mode === 'editor') {
+                (document.querySelector('.markdown-editor-codemirror .cm-content') as HTMLElement)?.focus();
+            } else {
+                const cachedId = lastFocusedCache[`note-${notaId}`] || 'editor-task-0';
+                document.getElementById(cachedId)?.focus();
+            }
+        }, 50);
+        return () => clearTimeout(timer);
+    }, [note?.id, mode, tareas]);
 
     // Guardar foco en el caché para restablecer
     const handleElementFocus = (id: string) => {
@@ -170,6 +320,12 @@ export function useNoteEditorViewModel(
         handleMarkdownChange,
         handleAgregarTarea,
         toggleTaskStatus,
-        handleElementFocus
+        handleElementFocus,
+        savingStatus,
+        toasts,
+        handleBack,
+        switcher,
+        notesInEnv,
+        isLineWrapping
     };
 }

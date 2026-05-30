@@ -1,0 +1,10 @@
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/toml_writer-905dcf72d04bc8c2.d: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/integer.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/key.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/string.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/value.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/write.rs
+
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/libtoml_writer-905dcf72d04bc8c2.rmeta: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/integer.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/key.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/string.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/value.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/write.rs
+
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/lib.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/integer.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/key.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/string.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/value.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.1+spec-1.1.0/src/write.rs:

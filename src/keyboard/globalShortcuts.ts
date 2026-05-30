@@ -60,6 +60,30 @@ export const registerGlobalShortcuts = (params: GlobalShortcutParams) => {
         params.navigateForward();
       },
       description: 'Avanzar navegación'
+    },
+    // 6. Activar/Desactivar mouse con Ctrl + Alt + M
+    {
+      code: 'KeyM',
+      ctrlKey: true,
+      altKey: true,
+      action: (e) => {
+        e.preventDefault();
+        document.body.classList.toggle('disable-mouse');
+        const isMouseDisabled = document.body.classList.contains('disable-mouse');
+        const event = new CustomEvent('toggle-mouse-mode', { detail: { disabled: isMouseDisabled } });
+        window.dispatchEvent(event);
+      },
+      description: 'Activar/Desactivar interacción con mouse'
+    },
+    // 7. Mostrar ayuda con F1
+    {
+      code: 'F1',
+      action: (e) => {
+        e.preventDefault();
+        const event = new CustomEvent('open-shortcut-help');
+        window.dispatchEvent(event);
+      },
+      description: 'Mostrar ayuda de atajos de teclado'
     }
   ]);
 };

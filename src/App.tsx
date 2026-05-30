@@ -6,11 +6,14 @@ import { useNavigationController } from './navigation/NavigationController';
 import { db, CursoDetalle } from './services/database';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './keyboard/globalShortcuts';
 import { OverlayProvider } from './context/OverlayContext';
+import { ShortcutHelpModal } from './components/composite/ShortcutHelpModal';
 import './App.css';
 
 function AppContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);  
   const [cursos, setCursos] = useState<CursoDetalle[]>([]);
+  const [mouseToast, setMouseToast] = useState<{ id: string; title: string; description: string } | null>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // Inicializamos nuestro NavHost Controller nativo
   const navController = useNavigationController({ type: 'welcome' });
@@ -35,7 +38,38 @@ function AppContent() {
     });
 
     return () => unregisterGlobalShortcuts();
-  }, [navController]); 
+  }, [navController]);
+
+  // Escuchar el evento de activación/desactivación de mouse
+  useEffect(() => {
+    const handleToggleMouse = (e: Event) => {
+      const customEvent = e as CustomEvent<{ disabled: boolean }>;
+      const disabled = customEvent.detail.disabled;
+      
+      const toastId = Math.random().toString(36).substring(2, 9);
+      setMouseToast({
+        id: toastId,
+        title: disabled ? "MODO TECLADO" : "MODO HÍBRIDO",
+        description: disabled ? "RATÓN DESACTIVADO COMPLETAMENTE" : "RATÓN ACTIVADO NUEVAMENTE"
+      });
+      
+      setTimeout(() => {
+        setMouseToast(prev => prev?.id === toastId ? null : prev);
+      }, 4000);
+    };
+
+    window.addEventListener('toggle-mouse-mode', handleToggleMouse);
+    return () => window.removeEventListener('toggle-mouse-mode', handleToggleMouse);
+  }, []); 
+
+  // Escuchar el evento de ayuda de atajos
+  useEffect(() => {
+    const handleOpenHelp = () => {
+      setIsHelpOpen(true);
+    };
+    window.addEventListener('open-shortcut-help', handleOpenHelp);
+    return () => window.removeEventListener('open-shortcut-help', handleOpenHelp);
+  }, []);
 
   return (
     <div className="app-container">
@@ -57,6 +91,26 @@ function AppContent() {
           navigateBack={navController.navigateBack}
         />
       </main>
+
+      {/* Global Mouse Toggle Toast */}
+      {mouseToast && (
+        <div className="global-toast-container">
+          <div className="toast-item">
+            <div className="toast-icon-circle"></div>
+            <div className="toast-content" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span className="brand-text" style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ffffff', letterSpacing: '1px' }}>
+                {mouseToast.title}
+              </span>
+              <span style={{ fontSize: '0.65rem', opacity: 0.5, textTransform: 'none', color: 'var(--text-color)' }}>
+                {mouseToast.description}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Atajos de teclado modal global */}
+      <ShortcutHelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );
 }

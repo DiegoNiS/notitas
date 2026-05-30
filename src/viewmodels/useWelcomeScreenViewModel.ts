@@ -22,6 +22,12 @@ export function useWelcomeScreenViewModel(
         db.obtenerUsuario().then(data => setNombreUsuario(data.nombre));
     }, []);
 
+    const registrarUsuario = async (nombre: string) => {
+        if (!nombre.trim()) return;
+        await db.guardarUsuario(nombre.trim());
+        setNombreUsuario(nombre.trim());
+    };
+
     // Registrar atajos específicos para WelcomeScreen
     useEffect(() => {
         ShortcutManager.registerGroup('welcomeScreen', [
@@ -44,6 +50,7 @@ export function useWelcomeScreenViewModel(
 
     return {
         nombreUsuario,
-        switcher
+        switcher,
+        registrarUsuario
     };
 }

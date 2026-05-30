@@ -1,0 +1,11 @@
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/zvariant_derive-17d108b82a47b077.d: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/dict.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/signature.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/type.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/utils.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/value.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/../README.md
+
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/libzvariant_derive-17d108b82a47b077.so: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/dict.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/signature.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/type.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/utils.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/value.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/../README.md
+
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/lib.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/dict.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/signature.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/type.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/utils.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/value.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zvariant_derive-5.11.0/src/../README.md:

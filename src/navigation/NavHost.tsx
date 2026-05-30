@@ -53,12 +53,13 @@ export function NavHost({ currentRoute, cursos, onRecargarCursos, navigateTo, na
             return (
                 <NoteEditorView
                     curso={cursoActivo}
-                    ambienteId={currentRoute.ambienteId}
                     notaId={currentRoute.notaId}
                     onBack={() => navigateTo({ type: 'environment', courseId: currentRoute.courseId, ambienteId: currentRoute.ambienteId })}
+                    navigateTo={navigateTo}
                 />
             );
         }
+
         default:
             return <WelcomeScreen navigateTo={navigateTo} cursos={cursos} />;
     }

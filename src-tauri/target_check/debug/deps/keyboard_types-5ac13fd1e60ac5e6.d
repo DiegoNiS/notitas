@@ -1,0 +1,11 @@
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/keyboard_types-5ac13fd1e60ac5e6.d: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/code.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/key.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/location.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/modifiers.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/shortcuts.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/webdriver.rs
+
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/libkeyboard_types-5ac13fd1e60ac5e6.rmeta: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/code.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/key.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/location.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/modifiers.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/shortcuts.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/webdriver.rs
+
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/lib.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/code.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/key.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/location.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/modifiers.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/shortcuts.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyboard-types-0.7.0/src/webdriver.rs:

@@ -1,6 +1,6 @@
 // Ruta: src/screens/CourseView.tsx
 import { useCourseViewViewModel } from '../viewmodels/useCourseViewViewModel';
-import { CursoDetalle } from '../services/database';
+import { CursoDetalle, formatTaskDueDate } from '../services/database';
 import { GenericSwitcher } from '../components/core/GenericSwitcher';
 
 interface CourseViewProps {
@@ -60,7 +60,22 @@ export function CourseView({ curso, onBack, onSelectAmbiente, onSelectNota }: Co
         const task = vm.tareas[index];
         if (task) {
           vm.toggleTaskStatus(task);
+          setTimeout(() => {
+            const currentElement = document.getElementById(`${type}-${index}`);
+            if (currentElement) {
+              currentElement.focus();
+            }
+          }, 50);
         }
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      if (type === 'env') {
+        const activeTaskId = `task-${vm.activeTaskIndex}`;
+        document.getElementById(activeTaskId)?.focus();
+      } else {
+        const activeEnvId = `env-${vm.activeEnvIndex}`;
+        document.getElementById(activeEnvId)?.focus();
       }
     }
   };
@@ -77,9 +92,14 @@ export function CourseView({ curso, onBack, onSelectAmbiente, onSelectNota }: Co
         <div className="shape-triangle left"></div>
       </div>
       
-      <div className="course-view-header">
-        <h2 className="brand-text">{curso.nombre.toUpperCase()}</h2>
-        <div className="shape-dash"></div>
+      <div className="view-header-layout">
+        <div className="view-header-titles">
+          <span className="view-header-category">VISTA DE CURSO</span>
+          <h2 className="view-header-title">{curso.nombre.toUpperCase()}</h2>
+        </div>
+        <div className="view-header-decor">
+          <div className="shape-dash"></div>
+        </div>
       </div>
 
       <div className="course-view-content">
@@ -134,7 +154,6 @@ export function CourseView({ curso, onBack, onSelectAmbiente, onSelectNota }: Co
               const id = `task-${index}`;
               const isCompleted = task.estado === 'completed';
               const isFocused = index === vm.activeTaskIndex;
-              const cleanedDate = task.fechaEntrega.replace(/^\(|\)$/g, '');
               
               return (
                 <div 
@@ -159,7 +178,7 @@ export function CourseView({ curso, onBack, onSelectAmbiente, onSelectNota }: Co
 
                     {/* Fila Intermedia: Fecha y hora de entrega */}
                     <span className="task-due-date brand-text" style={{ fontSize: '0.65rem', opacity: 0.5, letterSpacing: '2px' }}>
-                      {cleanedDate}
+                      {formatTaskDueDate(task.fechaEntrega)}
                     </span>
 
                     {/* Fila Inferior: Ambiente e Indicador de Estado */}

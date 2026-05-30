@@ -1,0 +1,11 @@
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/async_task-0b7cb14e23219333.d: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/header.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/raw.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/runnable.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/state.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/task.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/utils.rs
+
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/libasync_task-0b7cb14e23219333.rmeta: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/header.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/raw.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/runnable.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/state.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/task.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/utils.rs
+
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/lib.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/header.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/raw.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/runnable.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/state.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/task.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-task-4.7.1/src/utils.rs:

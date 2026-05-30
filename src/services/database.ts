@@ -1,4 +1,5 @@
 // Ruta: src/services/database.ts
+import { invoke } from '@tauri-apps/api/core';
 
 // 1. MODELOS DE TABLAS PURAS (Como se verían en tu SQLite)
 export class Curso {
@@ -44,6 +45,7 @@ export interface CursoDetalle {
   nombre: string;
   ambientes: string[]; // Nombres de los ambientes ('Teoría', 'Laboratorio')
   tareasCount: number; // Número de tareas asociadas
+  archivado: number; // 0 o 1
 }
 
 export interface TareaDetail {
@@ -58,6 +60,29 @@ export interface TareaDetail {
 }
 
 // 3. PARSER DE MARKDOWN Y HELPER DE EDICIÓN
+export function formatTaskDueDate(dateStr: string): string {
+  if (!dateStr) return '';
+  let clean = dateStr.replace(/^@/, '').trim();
+  
+  // Match DD/MM - HH:MM o DD/MM
+  const dateRegex = /^(\d{1,2})\/(\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{1,2}))?$/;
+  const match = clean.match(dateRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // 0-indexed in JS
+    const year = new Date().getFullYear(); // Usar año corriente
+    
+    const date = new Date(year, month, day);
+    if (!isNaN(date.getTime())) {
+      const daysOfWeek = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      const dayName = daysOfWeek[date.getDay()];
+      const hourMin = match[3] && match[4] ? ` - ${match[3].padStart(2, '0')}:${match[4].padStart(2, '0')}` : '';
+      return `${dayName} ${match[1].padStart(2, '0')}/${match[2].padStart(2, '0')}${hourMin}`.toUpperCase();
+    }
+  }
+  return clean.toUpperCase();
+}
+
 export function parseMarkdownNote(markdown: string) {
   const lines = markdown.split('\n');
   let titulo = 'Nota sin título';
@@ -127,293 +152,119 @@ export function updateTaskStateInMarkdown(
 }
 
 // 4. LA BASE DE DATOS SIMULADA
-class MockDatabase {
-  private tablas = {
-    // Tabla: cursos
-    cursos: [
-      new Curso('1', 'ISW', 'Ingeniería de Software III'),
-      new Curso('2', 'DB2', 'Base de Datos Avanzadas y Distribuidas'),
-      new Curso('3', 'SOP', 'Sistemas Operativos y Redes de Computadoras')
-    ],
-    // Tabla: ambientes
-    ambientes: [
-      new Ambiente('amb_1', 'Teoría'),
-      new Ambiente('amb_2', 'Laboratorio'),
-      new Ambiente('amb_3', 'Práctica'),
-      new Ambiente('amb_4', 'Proyecto'),
-      new Ambiente('amb_5', 'Seminario')
-    ],
-    // Tabla: curso_ambientes (La tabla intermedia)
-    curso_ambientes: [
-      new CursoAmbiente('1', 'amb_1'), // ISW tiene Teoría
-      new CursoAmbiente('1', 'amb_2'), // ISW tiene Lab
-      new CursoAmbiente('2', 'amb_1'), // DB2 tiene Teoría
-      new CursoAmbiente('3', 'amb_1'), // SOP tiene Teoría
-      new CursoAmbiente('3', 'amb_2'), // SOP tiene Lab
-      new CursoAmbiente('3', 'amb_4')  // SOP tiene Proyecto
-    ],
-    // Tabla: tareas (Vinculadas a notas mock correspondientes)
-    tareas: [
-      new Tarea('t1', '1', 'amb_1', 'n1', 'Investigar arquitecturas limpias y patrones de diseño', 'in_progress', 'martes 4 - 15:50'),
-      new Tarea('t2', '1', 'amb_2', 'n3', 'Configurar entorno de Tauri, Rust y dependencias locales', 'incomplete', 'jueves 6 - 08:30'),
-      new Tarea('t3', '1', 'amb_2', 'n3', 'Diseñar diagramas de secuencia para el flujo de autenticación', 'incomplete', 'viernes 7 - 12:00'),
-      new Tarea('t4', '3', 'amb_1', 'n4', 'Estudiar planificación de CPU y algoritmos Round Robin', 'in_progress', 'lunes 10 - 10:15'),
-      new Tarea('t5', '3', 'amb_2', 'n5', 'Implementar socket multihilo con soporte para Keep-Alive', 'incomplete', 'miércoles 12 - 16:40'),
-      new Tarea('t6', '3', 'amb_4', 'n6', 'Presentar el primer avance del proyecto de fin de curso', 'incomplete', 'viernes 14 - 18:00'),
-      new Tarea('t7', '3', 'amb_1', 'n4', 'Resolver cuestionario teórico sobre semáforos y locks', 'incomplete', 'lunes 17 - 09:00'),
-      new Tarea('t8', '3', 'amb_2', 'n5', 'Configurar y validar el servidor DNS en la red interna', 'in_progress', 'miércoles 19 - 14:30'),
-    ],
-    // Tabla: notas (Notas mock por ambiente conteniendo el Markdown inicial)
-    notas: [
-      new Nota(
-        'n1', 
-        '1', 
-        'amb_1', 
-        'Conceptos de Arquitectura Hexagonal', 
-        `# Conceptos de Arquitectura Hexagonal\nLa arquitectura hexagonal divide el sistema en puertos y adaptadores para aislar el núcleo del negocio...\n\n:Tarea [/] Investigar arquitecturas limpias y patrones de diseño @martes 4 - 15:50`, 
-        '28 de mayo'
-      ),
-      new Nota(
-        'n2', 
-        '1', 
-        'amb_1', 
-        'Patrón Repository y su uso con ORMs', 
-        `# Patrón Repository y su uso con ORMs\nEl patrón repository permite abstraer el almacenamiento de datos, facilitando las pruebas unitarias...`, 
-        '29 de mayo'
-      ),
-      new Nota(
-        'n3', 
-        '1', 
-        'amb_2', 
-        'Instalación de dependencias Tauri en Linux', 
-        `# Instalación de dependencias Tauri en Linux\nEs necesario instalar libwebkit2gtk-4.0-dev, build-essential, curl, wget y otras dependencias...\n\n:Tarea [ ] Configurar entorno de Tauri, Rust y dependencias locales @jueves 6 - 08:30\n:Tarea [ ] Diseñar diagramas de secuencia para el flujo de autenticación @viernes 7 - 12:00`, 
-        '25 de mayo'
-      ),
-      new Nota(
-        'n4', 
-        '3', 
-        'amb_1', 
-        'Apuntes sobre Semáforos', 
-        `# Apuntes sobre Semáforos\nUn semáforo es una variable entera que se utiliza para la sincronización de procesos concurrentes...\n\n:Tarea [/] Estudiar planificación de CPU y algoritmos Round Robin @lunes 10 - 10:15\n:Tarea [ ] Resolver cuestionario teórico sobre semáforos y locks @lunes 17 - 09:00`, 
-        '20 de mayo'
-      ),
-      new Nota(
-        'n5',
-        '3',
-        'amb_2',
-        'Socket multihilo en Java y Servidor DNS',
-        `# Socket multihilo en Java y Servidor DNS\nNotas sobre el comportamiento de sockets TCP y configuración local del servidor DNS.\n\n:Tarea [ ] Implementar socket multihilo con soporte para Keep-Alive @miércoles 12 - 16:40\n:Tarea [/] Configurar y validar el servidor DNS en la red interna @miércoles 19 - 14:30`,
-        '21 de mayo'
-      ),
-      new Nota(
-        'n6',
-        '3',
-        'amb_4',
-        'Avance del Proyecto de Fin de Curso',
-        `# Avance del Proyecto de Fin de Curso\nPresentación de diagramas UML iniciales y estructura del backend.\n\n:Tarea [ ] Presentar el primer avance del proyecto de fin de curso @viernes 14 - 18:00`,
-        '24 de mayo'
-      )
-    ]
-  };
-
-  private usuario = { nombre: 'Dante' };
-
-  private delay(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  // --- QUERIES (Peticiones) ---
+class TauriDatabase {
+  private tareasCounts = new Map<string, number>();
 
   async obtenerUsuario() {
-    await this.delay(100);
-    return this.usuario;
+    const nombre = await invoke<string>('obtener_nombre_usuario');
+    return { nombre };
+  }
+
+  async guardarUsuario(nombre: string): Promise<void> {
+    await invoke('guardar_nombre_usuario', { nombre });
   }
 
   async obtenerAmbientesBase(): Promise<Ambiente[]> {
-    await this.delay(200);
-    return [...this.tablas.ambientes];
+    return await invoke<Ambiente[]>('obtener_ambientes_base');
   }
 
   async obtenerCursos(): Promise<CursoDetalle[]> {
-    await this.delay(300);
-    
-    return this.tablas.cursos.map(curso => {
-      const relaciones = this.tablas.curso_ambientes.filter(ca => ca.curso_id === curso.id);
-      
-      const nombresAmbientes = relaciones.map(rel => {
-        const ambiente = this.tablas.ambientes.find(a => a.id === rel.ambiente_id);
-        return ambiente ? ambiente.nombre : 'Desconocido';
-      });
-
-      const tareasCount = this.tablas.tareas.filter(
-        t => t.curso_id === curso.id && t.estado !== 'completed'
-      ).length;
-
-      return {
-        id: curso.id,
-        abreviatura: curso.abreviatura,
-        nombre: curso.nombre,
-        ambientes: nombresAmbientes,
-        tareasCount
-      };
-    });
+    return await invoke<CursoDetalle[]>('obtener_cursos');
   }
 
   async obtenerAmbientesPorCurso(cursoId: string): Promise<Ambiente[]> {
-    await this.delay(100);
-    const relaciones = this.tablas.curso_ambientes.filter(ca => ca.curso_id === cursoId);
-    return relaciones.map(rel => {
-      const amb = this.tablas.ambientes.find(a => a.id === rel.ambiente_id);
-      return amb!;
-    }).filter(Boolean);
+    return await invoke<Ambiente[]>('obtener_ambientes_por_curso', { cursoId });
   }
 
   async obtenerTareasPendientesPorCurso(cursoId: string): Promise<TareaDetail[]> {
-    await this.delay(200);
-    return this.tablas.tareas
-      .filter(t => t.curso_id === cursoId && t.estado !== 'completed')
-      .map(t => {
-        const amb = this.tablas.ambientes.find(a => a.id === t.ambiente_id);
-        return {
-          id: t.id,
-          cursoId: t.curso_id,
-          ambienteId: t.ambiente_id,
-          ambienteNombre: amb ? amb.nombre : 'Desconocido',
-          notaId: t.nota_id,
-          descripcion: t.descripcion,
-          estado: t.estado,
-          fechaEntrega: t.fecha_entrega
-        };
-      });
+    return await invoke<TareaDetail[]>('obtener_tareas_pendientes_por_curso', { cursoId });
   }
 
   async obtenerTareasPendientesPorCursoAmbiente(cursoId: string, ambienteId: string): Promise<TareaDetail[]> {
-    await this.delay(200);
-    return this.tablas.tareas
-      .filter(t => t.curso_id === cursoId && t.ambiente_id === ambienteId && t.estado !== 'completed')
-      .map(t => {
-        const amb = this.tablas.ambientes.find(a => a.id === t.ambiente_id);
-        return {
-          id: t.id,
-          cursoId: t.curso_id,
-          ambienteId: t.ambiente_id,
-          ambienteNombre: amb ? amb.nombre : 'Desconocido',
-          notaId: t.nota_id,
-          descripcion: t.descripcion,
-          estado: t.estado,
-          fechaEntrega: t.fecha_entrega
-        };
-      });
+    return await invoke<TareaDetail[]>('obtener_tareas_pendientes_por_curso_ambiente', { cursoId, ambienteId });
   }
 
   async obtenerNotasPorCursoAmbiente(cursoId: string, ambienteId: string): Promise<Nota[]> {
-    await this.delay(200);
-    return this.tablas.notas.filter(n => n.curso_id === cursoId && n.ambiente_id === ambienteId);
+    const result = await invoke<any[]>('obtener_notas_por_curso_ambiente', { cursoId, ambienteId });
+    const notes: Nota[] = [];
+    for (const item of result) {
+      this.tareasCounts.set(item.id, item.tareas_count || 0);
+      notes.push(new Nota(
+        item.id,
+        item.curso_id,
+        item.ambiente_id,
+        item.titulo,
+        item.contenido,
+        item.fecha_creacion
+      ));
+    }
+    return notes;
   }
 
   async obtenerNotaPorId(notaId: string): Promise<Nota | null> {
-    await this.delay(100);
-    return this.tablas.notas.find(n => n.id === notaId) || null;
+    const item = await invoke<any | null>('obtener_nota_por_id', { notaId });
+    if (!item) return null;
+    return new Nota(
+      item.id,
+      item.curso_id,
+      item.ambiente_id,
+      item.titulo,
+      item.contenido,
+      item.fecha_creacion
+    );
   }
 
   async obtenerTareasPorNota(notaId: string): Promise<TareaDetail[]> {
-    await this.delay(150);
-    return this.tablas.tareas
-      .filter(t => t.nota_id === notaId)
-      .map(t => {
-        const amb = this.tablas.ambientes.find(a => a.id === t.ambiente_id);
-        return {
-          id: t.id,
-          cursoId: t.curso_id,
-          ambienteId: t.ambiente_id,
-          ambienteNombre: amb ? amb.nombre : 'Desconocido',
-          notaId: t.nota_id,
-          descripcion: t.descripcion,
-          estado: t.estado,
-          fechaEntrega: t.fecha_entrega
-        };
-      });
+    return await invoke<TareaDetail[]>('obtener_tareas_por_nota', { notaId });
   }
 
   obtenerTareasCountDeNotaSync(notaId: string): number {
-    return this.tablas.tareas.filter(t => t.nota_id === notaId).length;
+    return this.tareasCounts.get(notaId) || 0;
   }
 
-  // --- MUTACIONES ---
-
   async crearCurso(abreviatura: string, nombre: string, ambientesIds: string[]): Promise<void> {
-    await this.delay(500);
-    const nuevoCursoId = crypto.randomUUID();
-    this.tablas.cursos.push(new Curso(nuevoCursoId, abreviatura, nombre));
-
-    ambientesIds.forEach(ambienteId => {
-      this.tablas.curso_ambientes.push(new CursoAmbiente(nuevoCursoId, ambienteId));
-    });
+    await invoke('crear_curso', { abreviatura, nombre, ambientesIds });
   }
 
   async actualizarTareaEstado(tareaId: string, estado: 'incomplete' | 'in_progress' | 'completed'): Promise<void> {
-    await this.delay(100);
-    const t = this.tablas.tareas.find(x => x.id === tareaId);
-    if (t) {
-      t.estado = estado;
-      
-      // Sincronizar de vuelta al Markdown de la nota
-      const note = this.tablas.notas.find(n => n.id === t.nota_id);
-      if (note) {
-        note.contenido = updateTaskStateInMarkdown(note.contenido, t.descripcion, estado);
-        const parsed = parseMarkdownNote(note.contenido);
-        note.titulo = parsed.titulo;
-      }
-    }
+    await invoke('actualizar_tarea_estado', { tareaId, nuevoEstado: estado });
   }
 
   async crearNota(cursoId: string, ambienteId: string, titulo: string, contenido: string): Promise<string> {
-    await this.delay(300);
-    const id = crypto.randomUUID();
-    const nueva = new Nota(
-      id,
-      cursoId,
-      ambienteId,
-      titulo,
-      contenido,
-      new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
-    );
-    this.tablas.notas.push(nueva);
-    
-    // Sincronizar por primera vez si contiene tareas
-    await this.sincronizarTareasDeNota(id, contenido);
-    
-    return id;
+    return await invoke<string>('crear_nota', { cursoId, ambienteId, titulo, contenido });
   }
 
   async sincronizarTareasDeNota(notaId: string, markdownContent: string): Promise<void> {
-    await this.delay(100);
-    const note = this.tablas.notas.find(n => n.id === notaId);
-    if (!note) return;
+    await invoke('sincronizar_tareas_de_nota', { noteId: notaId, contenido: markdownContent });
+  }
 
-    note.contenido = markdownContent;
-    
-    const parsed = parseMarkdownNote(markdownContent);
-    note.titulo = parsed.titulo;
+  async eliminarCurso(id: string): Promise<void> {
+    await invoke('eliminar_curso', { id });
+  }
 
-    // Eliminar tareas viejas de esta nota
-    this.tablas.tareas = this.tablas.tareas.filter(t => t.nota_id !== notaId);
+  async eliminarNota(notaId: string): Promise<void> {
+    await invoke('eliminar_nota', { notaId });
+  }
 
-    // Insertar tareas nuevas
-    parsed.tasks.forEach((taskParsed) => {
-      const newTaskId = crypto.randomUUID();
-      const newT = new Tarea(
-        newTaskId,
-        note.curso_id,
-        note.ambiente_id,
-        notaId,
-        taskParsed.descripcion,
-        taskParsed.estado,
-        taskParsed.fechaEntrega
-      );
-      this.tablas.tareas.push(newT);
-    });
+  async actualizarCurso(id: string, nombre: string, abreviatura: string): Promise<void> {
+    await invoke('actualizar_curso', { id, nombre, abreviatura });
+  }
+
+  async archivarCurso(id: string, archivado: boolean): Promise<void> {
+    await invoke('archivar_curso', { id, archivado });
+  }
+
+  async agregarAmbiente(cursoId: string, nombre: string): Promise<void> {
+    await invoke('agregar_ambiente', { cursoId, nombre });
+  }
+
+  async renameAmbiente(cursoId: string, ambienteId: string, nuevoNombre: string): Promise<void> {
+    await invoke('rename_ambiente', { cursoId, ambienteId, nuevoNombre });
+  }
+
+  async eliminarAmbiente(cursoId: string, ambienteId: string): Promise<void> {
+    await invoke('eliminar_ambiente', { cursoId, ambienteId });
   }
 }
 
-export const db = new MockDatabase();
+export const db = new TauriDatabase();

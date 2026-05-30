@@ -1,8 +1,11 @@
+// Ruta: src/screens/Dashboard.tsx
 import { GlobalOverlay } from '../components/core/GlobalOverlay';
 import { NewCourseModal } from '../components/composite/NewCourseModal';
 import { CursoDetalle } from '../services/database';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { CursosSwitcher } from '../components/composite/CursosSwitcher';
+import { EditarCursoModal } from '../components/composite/EditarCursoModal';
+import { ConfirmModal } from '../components/composite/ConfirmModal';
 
 interface DashboardProps {
   cursos: CursoDetalle[];
@@ -11,7 +14,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ cursos, onRecargar, onSelectCurso }: DashboardProps) {
-  const vm = useDashboardViewModel(cursos, onSelectCurso);
+  const vm = useDashboardViewModel(cursos, onSelectCurso, onRecargar);
 
   return (
     <div className="view-container slide-up-enter dashboard-container" style={{ position: 'relative', zIndex: vm.isMenuOpen ? 10001 : 1 }}>
@@ -20,7 +23,7 @@ export function Dashboard({ cursos, onRecargar, onSelectCurso }: DashboardProps)
       <CursosSwitcher 
         isOpen={vm.switcher.isOpen} 
         onClose={vm.switcher.close} 
-        cursos={cursos} 
+        cursos={vm.filteredCursos} 
         onSelectCurso={onSelectCurso} 
         selectedIndex={vm.switcher.selectedIndex}
       />
@@ -31,26 +34,95 @@ export function Dashboard({ cursos, onRecargar, onSelectCurso }: DashboardProps)
       {/* Modal para crear un nuevo curso */}
       <NewCourseModal isOpen={vm.isModalOpen} onClose={() => vm.setIsModalOpen(false)} onSuccess={onRecargar} />
 
+      {/* Modal para editar un curso existente y sus ambientes */}
+      <EditarCursoModal 
+        isOpen={vm.isEditModalOpen} 
+        onClose={() => {
+          vm.setIsEditModalOpen(false);
+          vm.setCursoAEditar(null);
+        }} 
+        onSuccess={onRecargar}
+        curso={vm.cursoAEditar}
+      />
+
+      {/* Confirmar eliminación de un curso */}
+      <ConfirmModal 
+        isOpen={vm.isConfirmDeleteOpen}
+        onClose={() => {
+          vm.setIsConfirmDeleteOpen(false);
+          vm.setCursoAEliminar(null);
+        }}
+        onConfirm={vm.handleEliminarCursoConfirmado}
+        title="ELIMINAR CURSO"
+        message={`Esta acción eliminará de forma permanente el curso "${vm.cursoAEliminar?.nombre}" (${vm.cursoAEliminar?.abreviatura}) y TODOS sus ambientes, notas (incluyendo archivos de notas locales en disco) y tareas. Esta operación no se puede deshacer. ¿Deseas continuar?`}
+        confirmText="ELIMINAR CURSO"
+        isDanger={true}
+      />
+
       <div className="navigation-hint top-hint"><div className="shape-triangle up"></div></div>
-      <div className="dashboard-header"><h2 className="brand-text">GESTIÓN DE CURSOS</h2><div className="shape-dash"></div></div>
+      <div className="view-header-layout">
+        <div className="view-header-titles">
+          <span className="view-header-category">APLICACIÓN</span>
+          <h2 className="view-header-title">GESTIÓN DE CURSOS</h2>
+        </div>
+        <div className="view-header-decor">
+          <div className="shape-dash"></div>
+        </div>
+      </div>
+
+      {/* Pestañas de Cursos Activos / Archivados */}
+      <div className="dashboard-tabs">
+        <button 
+          className={`tab-button ${vm.activeTab === 'active' ? 'active' : ''}`}
+          onClick={() => vm.setActiveTab('active')}
+        >
+          Cursos Activos
+        </button>
+        <button 
+          className={`tab-button ${vm.activeTab === 'archived' ? 'active' : ''}`}
+          onClick={() => vm.setActiveTab('archived')}
+        >
+          Cursos Archivados
+        </button>
+      </div>
       
       {/* Clase especial en la lista si el Spotlight está activo */}
       <div className={`courses-list ${vm.isMenuOpen ? 'spotlight-active' : ''}`}>
         
         {/* Ítem para crear nuevo curso */}
-        <div 
-          className={`course-list-item new-course-item ${vm.focusedIndex === -1 ? 'focused' : ''}`} 
-          onClick={() => vm.setIsModalOpen(true)}
-        >
-          <div className="course-list-item-left">
-            <span className="course-list-abbr">-</span>
-            <span className="course-list-name brand-text" style={{ fontSize: '0.85rem' }}>NUEVO CURSO</span>
-            <span className="course-list-abbr">-</span>
+        {vm.activeTab === 'active' && (
+          <div 
+            className={`course-list-item new-course-item ${vm.focusedIndex === -1 ? 'focused' : ''}`} 
+            onClick={() => vm.setIsModalOpen(true)}
+          >
+            <div className="course-list-item-left">
+              <span className="course-list-abbr">-</span>
+              <span className="course-list-name brand-text" style={{ fontSize: '0.85rem' }}>NUEVO CURSO</span>
+              <span className="course-list-abbr">-</span>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Mensaje si la lista está vacía */}
+        {vm.filteredCursos.length === 0 && (
+          <div style={{ 
+            padding: '40px 20px', 
+            textAlign: 'center', 
+            opacity: 0.4, 
+            fontSize: '0.8rem', 
+            border: '1px dashed rgba(255,255,255,0.06)', 
+            borderRadius: '6px',
+            color: 'var(--text-color)',
+            width: '100%'
+          }}>
+            {vm.activeTab === 'active' 
+              ? 'No hay cursos activos. ¡Crea uno nuevo para comenzar!' 
+              : 'No hay cursos archivados.'}
+          </div>
+        )}
 
         {/* Elementos de cursos */}
-        {cursos.map((curso, index) => {
+        {vm.filteredCursos.map((curso, index) => {
           const isFocused = vm.focusedIndex === index;
           const isSelected = vm.selectedIds.has(curso.id);
           const isSpotlight = vm.isMenuOpen && isFocused;
@@ -70,7 +142,12 @@ export function Dashboard({ cursos, onRecargar, onSelectCurso }: DashboardProps)
               
               <div className="course-list-item-left">
                 <span className="course-list-abbr">{curso.abreviatura}</span>
-                <span className="course-list-name">{curso.nombre}</span>
+                <span className="course-list-name">
+                  {curso.nombre} 
+                  {curso.archivado === 1 && (
+                    <span style={{ fontSize: '0.6rem', opacity: 0.4, marginLeft: '10px', letterSpacing: '0.5px' }}>[ARCHIVADO]</span>
+                  )}
+                </span>
               </div>
               
               <div className="course-list-item-right">

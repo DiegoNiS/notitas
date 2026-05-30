@@ -1,0 +1,12 @@
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/sqlx-6238a43fd8f2ee76.d: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/any/mod.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/macros/mod.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/ty_match.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/spec_error.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/lib.md /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/macros/test.md /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/any/install_drivers_note.md
+
+/home/dantnt/MyProjexts/notitas/src-tauri/target_check/debug/deps/libsqlx-6238a43fd8f2ee76.rmeta: /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/lib.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/any/mod.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/macros/mod.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/ty_match.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/spec_error.rs /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/lib.md /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/macros/test.md /home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/any/install_drivers_note.md
+
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/lib.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/any/mod.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/macros/mod.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/ty_match.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/spec_error.rs:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/lib.md:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/macros/test.md:
+/home/dantnt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-0.8.0/src/any/install_drivers_note.md:

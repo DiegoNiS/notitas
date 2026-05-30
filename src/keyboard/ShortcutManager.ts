@@ -4,6 +4,10 @@ export class ShortcutManager {
     private static groups: Map<string, ShortcutConfig[]> = new Map();
     private static globalListener: ((e: KeyboardEvent) => void) | null = null;
 
+    public static getActiveShortcuts() {
+        return this.groups;
+    }
+
     public static registerGroup(groupId: string, configs: ShortcutConfig[]) {
         this.groups.set(groupId, configs);
         this.initGlobalListener();

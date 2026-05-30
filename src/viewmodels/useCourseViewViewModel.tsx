@@ -62,8 +62,8 @@ export function useCourseViewViewModel(
     // Registrar atajos de teclado para volver
     useEffect(() => {
         ShortcutManager.registerGroup('courseView', [
-            { code: 'Escape', action: () => onBack() },
-            { code: 'ArrowLeft', altKey: true, action: (e) => { e.preventDefault(); onBack(); } },
+            { code: 'Escape', action: () => onBack(), description: 'Regresar a la pantalla anterior' },
+            { code: 'ArrowLeft', altKey: true, action: (e) => { e.preventDefault(); onBack(); }, description: 'Regresar a la pantalla anterior' },
         ]);
 
         return () => {
@@ -71,9 +71,9 @@ export function useCourseViewViewModel(
         };
     }, [onBack]);
 
-    // Restaurar foco al montar
+    // Restaurar foco al montar o al cargar datos
     useEffect(() => {
-        if (!curso) return;
+        if (!curso || ambientes.length === 0) return;
 
         const timer = setTimeout(() => {
             const cachedId = lastFocusedCache[curso.id] || 'env-0';
@@ -81,10 +81,10 @@ export function useCourseViewViewModel(
             if (element) {
                 element.focus();
             }
-        }, 150); // Pequeño delay para asegurar que el DOM se haya renderizado
+        }, 50); // Pequeño delay para asegurar el renderizado
 
         return () => clearTimeout(timer);
-    }, [curso]);
+    }, [curso, ambientes]);
 
     // Guardar el foco en el caché
     const handleElementFocus = (id: string) => {

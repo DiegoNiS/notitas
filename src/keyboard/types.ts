@@ -7,4 +7,5 @@ export interface ShortcutConfig {
     action: (e: KeyboardEvent) => void;     
     preventDefault?: boolean;
     description?: string; // Para documentación o ayuda en UI
+    keyDisplay?: string; // Representación textual opcional para el atajo
 }
