@@ -2,27 +2,47 @@
 import { useState, useEffect } from 'react';
 import { ShortcutManager } from '../keyboard/ShortcutManager';
 import { useKeysHeld } from '../keyboard/useKeysHeld';
-import { db, CursoDetalle } from '../services/database';
+import { db, CursoDetalle, TareaDetail, parseTaskDueDateToNumber } from '../services/database';
 import { ShortcutConfig } from '../keyboard/types';
 import { useCtrlTabSwitcher } from '../keyboard/useCtrlTabSwitcher';
 
 export function useDashboardViewModel(
   cursos: CursoDetalle[],
   onSelectCurso: (cursoId: string) => void,
-  onRecargar: () => void
+  onRecargar: () => void,
+  navigateTo?: (route: any) => void
 ) {
   const isAltShiftPressed = useKeysHeld({ alt: true, shift: true });
 
-  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'tasks' | 'archived'>('active');
+  const [tareasPendientes, setTareasPendientes] = useState<TareaDetail[]>([]);
 
   // Filtrar los cursos según la pestaña activa
   const filteredCursos = activeTab === 'active' 
     ? cursos.filter(c => c.archivado === 0) 
     : cursos.filter(c => c.archivado === 1);
 
-  const switcher = useCtrlTabSwitcher({
-    items: filteredCursos,
-    onSelect: (curso) => onSelectCurso(curso.id)
+  // El switcher usará cursos o tareas según la pestaña activa
+  const switcherItems = activeTab === 'tasks' ? tareasPendientes : filteredCursos;
+
+  const switcher = useCtrlTabSwitcher<any>({
+    items: switcherItems,
+    onSelect: (item) => {
+      if (activeTab === 'tasks') {
+        const task = item as TareaDetail;
+        if (navigateTo) {
+          navigateTo({
+            type: 'editor',
+            courseId: task.cursoId,
+            ambienteId: task.ambienteId,
+            notaId: task.notaId
+          });
+        }
+      } else {
+        const curso = item as CursoDetalle;
+        onSelectCurso(curso.id);
+      }
+    }
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,15 +59,51 @@ export function useDashboardViewModel(
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuOptionIndex, setMenuOptionIndex] = useState(0);
 
+  // Cargar tareas pendientes globales
+  const cargarTareasPendientes = async () => {
+    try {
+      const data = await db.obtenerTareasPendientes();
+      // Ordenar por fecha de vencimiento más cercana primero
+      data.sort((a, b) => parseTaskDueDateToNumber(a.fechaEntrega) - parseTaskDueDateToNumber(b.fechaEntrega));
+      setTareasPendientes(data);
+    } catch (e) {
+      console.error('Error al cargar tareas pendientes:', e);
+    }
+  };
+
+  useEffect(() => {
+    cargarTareasPendientes();
+  }, [cursos]);
+
   // Resetear estados al cambiar de pestaña
   useEffect(() => {
-    setFocusedIndex(-1);
+    setFocusedIndex(activeTab === 'tasks' ? 0 : -1);
     setSelectedIds(new Set());
     setSelectionAnchor(null);
     setIsMenuOpen(false);
   }, [activeTab]);
 
-  // Obtener opciones dinámicas del menú
+  const toggleTaskStatus = async (task: TareaDetail) => {
+    let nuevoEstado: 'incomplete' | 'in_progress' | 'completed';
+    if (task.estado === 'incomplete') {
+      nuevoEstado = 'in_progress';
+    } else if (task.estado === 'in_progress') {
+      nuevoEstado = 'completed';
+    } else {
+      nuevoEstado = 'incomplete';
+    }
+
+    // Actualizar localmente
+    setTareasPendientes(prev => prev.map(t => t.id === task.id ? { ...t, estado: nuevoEstado } : t));
+
+    // Sincronizar en DB
+    await db.actualizarTareaEstado(task.id, nuevoEstado);
+
+    // Recargar datos principales para actualizar conteos
+    onRecargar();
+  };
+
+  // Obtener opciones dinámicas del menú Spotlight para Cursos
   const getOpcionesMenu = (): string[] => {
     const curso = filteredCursos[focusedIndex];
     if (curso && curso.archivado === 1) {
@@ -98,15 +154,24 @@ export function useDashboardViewModel(
     }
   };
 
+  // Conteo dinámico de ítems activos para límites de navegación
+  const getItemsCount = () => {
+    if (activeTab === 'tasks') return tareasPendientes.length;
+    return filteredCursos.length;
+  };
+  const itemsCount = getItemsCount();
+
   useEffect(() => {
     const shortcuts: ShortcutConfig[] = [
-      // 1. Abrir Modal de Creación con Ctrl + N
+      // 1. Abrir Modal de Creación con Ctrl + N (solo en vista cursos)
       {
         code: 'KeyN',
         ctrlKey: true,
         action: (e) => {
-          e.preventDefault();
-          setIsModalOpen(true);
+          if (activeTab !== 'tasks') {
+            e.preventDefault();
+            setIsModalOpen(true);
+          }
         },
         description: 'Crear un nuevo curso'
       },
@@ -118,11 +183,11 @@ export function useDashboardViewModel(
         action: (e) => {
           e.preventDefault();
           const num = parseInt(e.code.replace('Digit', '').replace('Numpad', ''), 10);
-          if (num - 1 >= 0 && num - 1 < filteredCursos.length) {
+          if (num - 1 >= 0 && num - 1 < itemsCount) {
             setFocusedIndex(num - 1);
           }
         },
-        description: 'Enfocar un curso rápidamente',
+        description: 'Enfocar un elemento rápidamente',
         keyDisplay: 'Alt + Shift + [1-9]'
       }
     ];
@@ -171,7 +236,7 @@ export function useDashboardViewModel(
           ctrlKey: true,
           action: (e) => {
             e.preventDefault();
-            if (focusedIndex >= 0) {
+            if (activeTab !== 'tasks' && focusedIndex >= 0) {
               setMenuOptionIndex(0);
               setIsMenuOpen(true);
             }
@@ -182,17 +247,23 @@ export function useDashboardViewModel(
           code: 'ArrowLeft',
           action: (e) => {
             e.preventDefault();
-            setActiveTab('active');
+            setActiveTab(prev => {
+              if (prev === 'archived') return 'tasks';
+              return 'active';
+            });
           },
-          description: 'Cambiar a la pestaña de Cursos Activos'
+          description: 'Cambiar a la pestaña de la izquierda'
         },
         {
           code: 'ArrowRight',
           action: (e) => {
             e.preventDefault();
-            setActiveTab('archived');
+            setActiveTab(prev => {
+              if (prev === 'active') return 'tasks';
+              return 'archived';
+            });
           },
-          description: 'Cambiar a la pestaña de Cursos Archivados'
+          description: 'Cambiar a la pestaña de la derecha'
         },
         {
           codeMatcher: (code) => code === 'ArrowDown' || code === 'ArrowUp',
@@ -203,9 +274,10 @@ export function useDashboardViewModel(
               setSelectionAnchor(null);
             }
             if (e.code === 'ArrowDown') {
-              setFocusedIndex(prev => Math.min(prev + 1, filteredCursos.length - 1));
+              setFocusedIndex(prev => Math.min(prev + 1, itemsCount - 1));
             } else {
-              setFocusedIndex(prev => Math.max(prev - 1, -1));
+              const minIndex = (activeTab === 'tasks' || itemsCount === 0) ? 0 : -1;
+              setFocusedIndex(prev => Math.max(prev - 1, minIndex));
             }
           },
           description: 'Mover el foco arriba/abajo por la lista',
@@ -217,6 +289,7 @@ export function useDashboardViewModel(
           shiftKey: true,
           action: (e) => {
             e.preventDefault();
+            if (activeTab === 'tasks') return; // Sin selección múltiple en tareas
             const currentAnchor = selectionAnchor !== null ? selectionAnchor : (focusedIndex >= 0 ? focusedIndex : 0);
             setSelectionAnchor(currentAnchor);
             const newFocus = e.code === 'ArrowDown' 
@@ -237,13 +310,36 @@ export function useDashboardViewModel(
           code: 'Enter',
           action: (e) => {
             e.preventDefault();
-            if (focusedIndex === -1) {
+            if (activeTab === 'tasks') {
+              const task = tareasPendientes[focusedIndex];
+              if (task && navigateTo) {
+                navigateTo({
+                  type: 'editor',
+                  courseId: task.cursoId,
+                  ambienteId: task.ambienteId,
+                  notaId: task.notaId
+                });
+              }
+            } else if (focusedIndex === -1) {
               setIsModalOpen(true);
             } else if (focusedIndex >= 0) {
               onSelectCurso(filteredCursos[focusedIndex].id);
             }
           },
-          description: 'Abrir el curso enfocado'
+          description: 'Abrir elemento enfocado'
+        },
+        {
+          code: 'Space',
+          action: (e) => {
+            if (activeTab === 'tasks') {
+              e.preventDefault();
+              const task = tareasPendientes[focusedIndex];
+              if (task) {
+                toggleTaskStatus(task);
+              }
+            }
+          },
+          description: 'Alternar estado de la tarea'
         }
       );
     }
@@ -253,7 +349,7 @@ export function useDashboardViewModel(
     return () => {
       ShortcutManager.unregisterGroup('dashboard');
     };
-  }, [filteredCursos, focusedIndex, selectedIds, selectionAnchor, isMenuOpen, menuOptionIndex, onSelectCurso, activeTab]);
+  }, [filteredCursos, focusedIndex, selectedIds, selectionAnchor, isMenuOpen, menuOptionIndex, onSelectCurso, activeTab, tareasPendientes, itemsCount, navigateTo]);
 
   return {
     isAltShiftPressed,
@@ -282,6 +378,8 @@ export function useDashboardViewModel(
     activeTab,
     setActiveTab,
     filteredCursos,
-    handleEliminarCursoConfirmado
+    handleEliminarCursoConfirmado,
+    tareasPendientes,
+    toggleTaskStatus
   };
 }

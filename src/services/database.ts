@@ -51,6 +51,8 @@ export interface CursoDetalle {
 export interface TareaDetail {
   id: string;
   cursoId: string;
+  cursoNombre?: string;
+  cursoAbreviatura?: string;
   ambienteId: string;
   ambienteNombre: string;
   notaId: string;
@@ -81,6 +83,21 @@ export function formatTaskDueDate(dateStr: string): string {
     }
   }
   return clean.toUpperCase();
+}
+
+export function parseTaskDueDateToNumber(dateStr: string): number {
+  if (!dateStr) return Infinity;
+  let clean = dateStr.replace(/^@/, '').trim();
+  const dateRegex = /^(\d{1,2})\/(\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{1,2}))?$/;
+  const match = clean.match(dateRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const hour = match[3] ? parseInt(match[3], 10) : 0;
+    const min = match[4] ? parseInt(match[4], 10) : 0;
+    return month * 1000000 + day * 10000 + hour * 100 + min;
+  }
+  return Infinity;
 }
 
 export function parseMarkdownNote(markdown: string) {
@@ -264,6 +281,10 @@ class TauriDatabase {
 
   async eliminarAmbiente(cursoId: string, ambienteId: string): Promise<void> {
     await invoke('eliminar_ambiente', { cursoId, ambienteId });
+  }
+
+  async obtenerTareasPendientes(): Promise<TareaDetail[]> {
+    return await invoke<TareaDetail[]>('obtener_tareas_pendientes');
   }
 }
 

@@ -1,12 +1,13 @@
 // Ruta: src/screens/NoteEditorView.tsx
 import { useNoteEditorViewModel } from '../viewmodels/useNoteEditorViewModel';
-import { CursoDetalle, formatTaskDueDate } from '../services/database';
+import { CursoDetalle, formatTaskDueDate, parseTaskDueDateToNumber } from '../services/database';
 import { GlobalOverlay } from '../components/core/GlobalOverlay';
 import { NotesSwitcher } from '../components/composite/NotesSwitcher';
 import { marked } from 'marked';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
+import { ConfirmModal } from '../components/composite/ConfirmModal';
 
 
 interface NoteEditorViewProps {
@@ -19,21 +20,7 @@ interface NoteEditorViewProps {
 export function NoteEditorView({ curso, notaId, onBack, navigateTo }: NoteEditorViewProps) {
   const vm = useNoteEditorViewModel(notaId, onBack, navigateTo);
 
-  // Helper para ordenar fechas (@DD/MM - HH:MM o @DD/MM)
-  const parseTaskDueDateToNumber = (dateStr: string): number => {
-    if (!dateStr) return Infinity;
-    let clean = dateStr.replace(/^@/, '').trim();
-    const dateRegex = /^(\d{1,2})\/(\d{1,2})(?:\s*-\s*(\d{1,2}):(\d{1,2}))?$/;
-    const match = clean.match(dateRegex);
-    if (match) {
-      const day = parseInt(match[1], 10);
-      const month = parseInt(match[2], 10);
-      const hour = match[3] ? parseInt(match[3], 10) : 0;
-      const min = match[4] ? parseInt(match[4], 10) : 0;
-      return month * 1000000 + day * 10000 + hour * 100 + min;
-    }
-    return Infinity;
-  };
+
 
   const pendingTasks = vm.tareas
     .filter(t => t.estado !== 'completed')
@@ -244,12 +231,12 @@ export function NoteEditorView({ curso, notaId, onBack, navigateTo }: NoteEditor
           </div>
         ) : (
           /* MODO TAREAS */
-          <div className="course-view-main" style={{ width: '100%' }}>
+          <div className="course-view-main" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 className="section-title" style={{ marginBottom: 0 }}>TAREAS ASOCIADAS A LA NOTA</h3>
             </div>
 
-            <div className="tasks-list">
+            <div className="tasks-list" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Botón de creación integrado en la lista como editor-task-0 */}
               <div
                 id="editor-task-0"
@@ -299,9 +286,9 @@ export function NoteEditorView({ curso, notaId, onBack, navigateTo }: NoteEditor
                       vm.setActiveTaskIndex(listIndex);
                     }}
                     onKeyDown={(e) => handleKeyDown(e, listIndex, combinedList.length)}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', padding: '15px 20px', gap: '10px' }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', padding: '15px 20px', gap: '10px', width: '100%', boxSizing: 'border-box', minWidth: 0 }}
                   >
-                    <div className="course-list-item-left" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div className="course-list-item-left" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       
                       {/* Fila Superior: Descripción */}
                       <span className="task-description" style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'none', color: '#ffffff' }}>
@@ -367,9 +354,9 @@ export function NoteEditorView({ curso, notaId, onBack, navigateTo }: NoteEditor
                       vm.setActiveTaskIndex(listIndex);
                     }}
                     onKeyDown={(e) => handleKeyDown(e, listIndex, combinedList.length)}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', padding: '15px 20px', gap: '10px', opacity: 0.4 }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', padding: '15px 20px', gap: '10px', opacity: 0.4, width: '100%', boxSizing: 'border-box', minWidth: 0 }}
                   >
-                    <div className="course-list-item-left" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div className="course-list-item-left" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       
                       {/* Fila Superior: Descripción (con tachado) */}
                       <span className="task-description" style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'none', color: '#ffffff', textDecoration: 'line-through' }}>
@@ -472,6 +459,17 @@ export function NoteEditorView({ curso, notaId, onBack, navigateTo }: NoteEditor
           notaId: nota.id
         })}
         selectedIndex={vm.switcher.selectedIndex}
+      />
+
+      {/* Confirmar eliminación de la nota desde el editor */}
+      <ConfirmModal 
+        isOpen={vm.isConfirmDeleteOpen}
+        onClose={() => vm.setIsConfirmDeleteOpen(false)}
+        onConfirm={vm.handleEliminarNotaConfirmado}
+        title="ELIMINAR NOTA ACTUAL"
+        message={`Esta acción eliminará de forma permanente la nota actual "${vm.note?.titulo}" y su archivo físico de Markdown en disco, cerrando el editor. ¿Deseas continuar?`}
+        confirmText="ELIMINAR NOTA"
+        isDanger={true}
       />
 
     </div>

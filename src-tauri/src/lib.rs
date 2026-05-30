@@ -20,6 +20,8 @@ pub struct Ambiente {
 pub struct TareaDetail {
     pub id: String,
     pub cursoId: String,
+    pub cursoNombre: Option<String>,
+    pub cursoAbreviatura: Option<String>,
     pub ambienteId: String,
     pub ambienteNombre: String,
     pub notaId: String,
@@ -502,6 +504,8 @@ fn obtener_tareas_pendientes_por_curso(paths: tauri::State<'_, AppPaths>, curso_
         Ok(TareaDetail {
             id: row.get(0)?,
             cursoId: row.get(1)?,
+            cursoNombre: None,
+            cursoAbreviatura: None,
             ambienteId: row.get(2)?,
             ambienteNombre: row.get(3)?,
             notaId: row.get(4)?,
@@ -547,6 +551,8 @@ fn obtener_tareas_pendientes_por_curso_ambiente(
         Ok(TareaDetail {
             id: row.get(0)?,
             cursoId: row.get(1)?,
+            cursoNombre: None,
+            cursoAbreviatura: None,
             ambienteId: row.get(2)?,
             ambienteNombre: row.get(3)?,
             notaId: row.get(4)?,
@@ -675,6 +681,8 @@ fn obtener_tareas_por_nota(paths: tauri::State<'_, AppPaths>, nota_id: String) -
         Ok(TareaDetail {
             id: row.get(0)?,
             cursoId: row.get(1)?,
+            cursoNombre: None,
+            cursoAbreviatura: None,
             ambienteId: row.get(2)?,
             ambienteNombre: row.get(3)?,
             notaId: row.get(4)?,
@@ -735,7 +743,7 @@ fn crear_nota(
         "12" => "diciembre",
         _ => "de",
     };
-    let fecha_es = format!("{} de {}", date_now.format("%e").to_string().trim(), mes_es);
+    let fecha_es = format!("{} de {} - {}:{}", date_now.format("%e").to_string().trim(), mes_es, date_now.format("%H"), date_now.format("%M"));
     let now_iso = date_now.format("%Y-%m-%d %H:%M:%S").to_string();
 
     // Escribimos archivo físico
@@ -820,6 +828,8 @@ fn obtener_tareas_pendientes(paths: tauri::State<'_, AppPaths>) -> Result<Vec<Ta
         "SELECT 
             t.id, 
             ac.curso_id, 
+            c.nombre as curso_nombre,
+            c.abreviatura as curso_abreviatura,
             ac.ambiente_plantilla_id as ambiente_id,
             ap.nombre as ambiente_nombre, 
             t.nota_id, 
@@ -830,6 +840,7 @@ fn obtener_tareas_pendientes(paths: tauri::State<'_, AppPaths>) -> Result<Vec<Ta
          JOIN notas n ON t.nota_id = n.id
          JOIN ambiente_curso ac ON n.ambiente_curso_id = ac.id
          JOIN ambientes_plantilla ap ON ac.ambiente_plantilla_id = ap.id
+         JOIN cursos c ON ac.curso_id = c.id
          WHERE t.estado != 'completed'
          ORDER BY t.fecha_entrega ASC, t.fecha_creacion DESC"
     ).map_err(|e| e.to_string())?;
@@ -838,12 +849,14 @@ fn obtener_tareas_pendientes(paths: tauri::State<'_, AppPaths>) -> Result<Vec<Ta
         Ok(TareaDetail {
             id: row.get(0)?,
             cursoId: row.get(1)?,
-            ambienteId: row.get(2)?,
-            ambienteNombre: row.get(3)?,
-            notaId: row.get(4)?,
-            descripcion: row.get(5)?,
-            estado: row.get(6)?,
-            fechaEntrega: row.get(7)?,
+            cursoNombre: Some(row.get(2)?),
+            cursoAbreviatura: Some(row.get(3)?),
+            ambienteId: row.get(4)?,
+            ambienteNombre: row.get(5)?,
+            notaId: row.get(6)?,
+            descripcion: row.get(7)?,
+            estado: row.get(8)?,
+            fechaEntrega: row.get(9)?,
         })
     }).map_err(|e| e.to_string())?;
 

@@ -1,26 +1,30 @@
 import { useState, useEffect } from 'react';
 import { ShortcutManager } from '../keyboard/ShortcutManager';
-import { CursoDetalle, db, TareaDetail, Ambiente } from '../services/database';
+import { CursoDetalle, db, TareaDetail, Ambiente, parseTaskDueDateToNumber } from '../services/database';
 import { useCtrlTabSwitcher } from '../keyboard/useCtrlTabSwitcher';
-
-// Caché a nivel de módulo para recordar el último elemento enfocado por curso
-const lastFocusedCache: Record<string, string> = {};
+import { ShortcutConfig } from '../keyboard/types';
 
 export function useCourseViewViewModel(
     curso: CursoDetalle | null,
     onBack: () => void,
-    onSelectAmbiente: (ambienteId: string) => void
+    onSelectAmbiente: (ambienteId: string) => void,
+    onSelectNota: (notaId: string, ambienteId: string) => void
 ) {
     const [tareas, setTareas] = useState<TareaDetail[]>([]);
     const [ambientes, setAmbientes] = useState<Ambiente[]>([]);
     const [ambienteFiltrado, setAmbienteFiltrado] = useState<string | null>(null);
-    const [activeEnvIndex, setActiveEnvIndex] = useState(0);
-    const [activeTaskIndex, setActiveTaskIndex] = useState(0);
+    const [activeTab, setActiveTab] = useState<'environments' | 'tasks'>('environments');
+    const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
-    // Reset indices when curso changes
+    // Reset focused index when changing tabs
     useEffect(() => {
-        setActiveEnvIndex(0);
-        setActiveTaskIndex(0);
+        setFocusedIndex(0);
+    }, [activeTab]);
+
+    // Reset active tab and focused index when curso changes
+    useEffect(() => {
+        setActiveTab('environments');
+        setFocusedIndex(0);
     }, [curso?.id]);
 
     // Cargar datos del curso (ambientes y tareas pendientes)
@@ -35,6 +39,7 @@ export function useCourseViewViewModel(
                 db.obtenerTareasPendientesPorCurso(cursoId)
             ]);
             if (active) {
+                listTareas.sort((a, b) => parseTaskDueDateToNumber(a.fechaEntrega) - parseTaskDueDateToNumber(b.fechaEntrega));
                 setAmbientes(listAmbientes);
                 setTareas(listTareas);
             }
@@ -47,7 +52,7 @@ export function useCourseViewViewModel(
         };
     }, [curso]);
 
-    // Configurar el switcher de ambientes (sin "TODOS LOS AMBIENTES")
+    // Configurar el switcher de ambientes
     const switcherItems = curso ? curso.ambientes : [];
     const switcher = useCtrlTabSwitcher({
         items: switcherItems,
@@ -59,39 +64,89 @@ export function useCourseViewViewModel(
         }
     });
 
-    // Registrar atajos de teclado para volver
+    const itemsCount = activeTab === 'environments' ? ambientes.length : tareas.length;
+
+    // Registrar atajos de teclado globales
     useEffect(() => {
-        ShortcutManager.registerGroup('courseView', [
+        const shortcuts: ShortcutConfig[] = [
             { code: 'Escape', action: () => onBack(), description: 'Regresar a la pantalla anterior' },
             { code: 'ArrowLeft', altKey: true, action: (e) => { e.preventDefault(); onBack(); }, description: 'Regresar a la pantalla anterior' },
-        ]);
+            
+            // Navegar entre pestañas
+            {
+                code: 'ArrowLeft',
+                action: (e) => {
+                    e.preventDefault();
+                    setActiveTab('environments');
+                },
+                description: 'Cambiar a la pestaña de Ambientes'
+            },
+            {
+                code: 'ArrowRight',
+                action: (e) => {
+                    e.preventDefault();
+                    setActiveTab('tasks');
+                },
+                description: 'Cambiar a la pestaña de Tareas Pendientes'
+            },
+            
+            // Navegación arriba/abajo
+            {
+                codeMatcher: (code) => code === 'ArrowDown' || code === 'ArrowUp',
+                action: (e) => {
+                    e.preventDefault();
+                    if (e.code === 'ArrowDown') {
+                        setFocusedIndex(prev => Math.min(prev + 1, itemsCount - 1));
+                    } else {
+                        setFocusedIndex(prev => Math.max(prev - 1, 0));
+                    }
+                },
+                description: 'Mover el foco arriba/abajo por la lista',
+                keyDisplay: '↑ / ↓'
+            },
+            
+            // Ejecutar/Abrir elemento
+            {
+                code: 'Enter',
+                action: (e) => {
+                    e.preventDefault();
+                    if (activeTab === 'environments') {
+                        const amb = ambientes[focusedIndex];
+                        if (amb) {
+                            onSelectAmbiente(amb.id);
+                        }
+                    } else {
+                        const task = tareas[focusedIndex];
+                        if (task && task.notaId) {
+                            onSelectNota(task.notaId, task.ambienteId);
+                        }
+                    }
+                },
+                description: 'Abrir elemento enfocado'
+            },
+            
+            // Alternar estado de la tarea (solo en pestaña de tareas)
+            {
+                code: 'Space',
+                action: (e) => {
+                    if (activeTab === 'tasks') {
+                        e.preventDefault();
+                        const task = tareas[focusedIndex];
+                        if (task) {
+                            toggleTaskStatus(task);
+                        }
+                    }
+                },
+                description: 'Alternar estado de la tarea'
+            }
+        ];
+
+        ShortcutManager.registerGroup('courseView', shortcuts);
 
         return () => {
             ShortcutManager.unregisterGroup('courseView');
         };
-    }, [onBack]);
-
-    // Restaurar foco al montar o al cargar datos
-    useEffect(() => {
-        if (!curso || ambientes.length === 0) return;
-
-        const timer = setTimeout(() => {
-            const cachedId = lastFocusedCache[curso.id] || 'env-0';
-            const element = document.getElementById(cachedId);
-            if (element) {
-                element.focus();
-            }
-        }, 50); // Pequeño delay para asegurar el renderizado
-
-        return () => clearTimeout(timer);
-    }, [curso, ambientes]);
-
-    // Guardar el foco en el caché
-    const handleElementFocus = (id: string) => {
-        if (curso) {
-            lastFocusedCache[curso.id] = id;
-        }
-    };
+    }, [ambientes, tareas, activeTab, focusedIndex, itemsCount, onBack, onSelectAmbiente, onSelectNota]);
 
     // Cambiar de estado de una tarea
     const toggleTaskStatus = async (task: TareaDetail) => {
@@ -119,10 +174,9 @@ export function useCourseViewViewModel(
         switcher,
         switcherItems,
         toggleTaskStatus,
-        handleElementFocus,
-        activeEnvIndex,
-        setActiveEnvIndex,
-        activeTaskIndex,
-        setActiveTaskIndex
+        activeTab,
+        setActiveTab,
+        focusedIndex,
+        setFocusedIndex
     };
 }

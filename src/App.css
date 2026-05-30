@@ -115,6 +115,7 @@ body, html {
   position: relative;
   display: flex;
   justify-content: center;
+  min-width: 0;
 }
 
 .editor-content {
@@ -339,6 +340,9 @@ kbd {
   display: flex;
   flex-direction: column;
   position: relative; /* Para posicionar los triángulos absolutos */
+  padding: 0 24px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .dashboard-header {
@@ -470,7 +474,8 @@ kbd {
 
 /* --- CONTENEDOR DEL DASHBOARD --- */
 .dashboard-container {
-  padding-top: 20px;
+  padding: 40px 50px;
+  box-sizing: border-box;
 }
 
 /* --- LISTA DE CURSOS MINIMALISTA (Dashboard) --- */
@@ -479,8 +484,8 @@ kbd {
   flex-direction: column;
   gap: 20px;
   width: 100%;
-  margin-top: 30px;
-  padding: 10px 50px;
+  margin-top: 10px;
+  padding: 0;
   box-sizing: border-box;
   overflow-y: auto;
 }
@@ -495,6 +500,10 @@ kbd {
   transition: opacity 0.25s ease;
   cursor: pointer;
   user-select: none;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 /* Hover/Focus states: only affect opacity and left block transform */
@@ -517,6 +526,7 @@ kbd {
   gap: 4px;
   transform-origin: left;
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.25s;
+  min-width: 0;
 }
 
 .course-list-item:hover .course-list-item-left,
@@ -542,6 +552,12 @@ kbd {
   font-weight: 400;
   opacity: 0.7;
   transition: opacity 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-overflow: ",,,";
+  max-width: 100%;
+  min-width: 0;
 }
 
 .course-list-item:hover .course-list-name,
@@ -911,11 +927,13 @@ kbd {
 .course-view-sidebar {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .course-view-main {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .section-title {
@@ -1082,8 +1100,21 @@ kbd {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-overflow: ",,,";
   display: block;
   max-width: 100%;
+  min-width: 0;
+}
+
+/* Truncar título de nota a una sola línea */
+.note-list-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-overflow: ",,,";
+  display: block;
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* --- GRID DE NOTAS (AMBIENTE) --- */
@@ -1566,7 +1597,7 @@ body.disable-mouse * {
 .dashboard-tabs {
   display: flex;
   gap: 15px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 8px;
 }
@@ -1576,7 +1607,7 @@ body.disable-mouse * {
   border: none;
   color: var(--text-color);
   opacity: 0.4;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 1.5px;
   cursor: pointer;
@@ -1650,4 +1681,19 @@ body.disable-mouse * {
 
 .edit-env-btn.danger {
   color: #ff3333;
+}
+
+/* --- APP DRAG BAR FOR FRAMELESS WINDOW --- */
+.app-drag-bar {
+  height: 12px;
+  width: 100%;
+  background: transparent;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 999999;
+  cursor: grab;
+}
+.app-drag-bar:active {
+  cursor: grabbing;
 }

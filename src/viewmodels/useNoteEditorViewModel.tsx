@@ -1,10 +1,26 @@
 // Ruta: src/viewmodels/useNoteEditorViewModel.tsx
 import { useState, useEffect, useRef } from 'react';
 import { ShortcutManager } from '../keyboard/ShortcutManager';
-import { db, TareaDetail, Nota, updateTaskStateInMarkdown } from '../services/database';
+import { db, TareaDetail, Nota, updateTaskStateInMarkdown, parseTaskDueDateToNumber } from '../services/database';
 import { useCtrlTabSwitcher } from '../keyboard/useCtrlTabSwitcher';
 
 const lastFocusedCache: Record<string, string> = {};
+
+const replaceLatexAccents = (text: string): string => {
+  return text
+    .replace(/\\'a/g, 'á')
+    .replace(/\\'e/g, 'é')
+    .replace(/\\'i/g, 'í')
+    .replace(/\\'o/g, 'ó')
+    .replace(/\\'u/g, 'ú')
+    .replace(/\\'A/g, 'Á')
+    .replace(/\\'E/g, 'É')
+    .replace(/\\'I/g, 'Í')
+    .replace(/\\'O/g, 'Ó')
+    .replace(/\\'U/g, 'Ú')
+    .replace(/\\~n/g, 'ñ')
+    .replace(/\\~N/g, 'Ñ');
+};
 
 export function useNoteEditorViewModel(
     notaId: string,
@@ -21,6 +37,7 @@ export function useNoteEditorViewModel(
     const [savingStatus, setSavingStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
     const [toasts, setToasts] = useState<{ id: string; title: string; description: string }[]>([]);
     const [isLineWrapping, setIsLineWrapping] = useState(true);
+    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
     // Toast helper
     const showToast = (title: string, description: string) => {
@@ -47,6 +64,7 @@ export function useNoteEditorViewModel(
             setMarkdown(loadedNote.contenido);
             lastMarkdownRef.current = loadedNote.contenido;
             const loadedTareas = await db.obtenerTareasPorNota(notaId);
+            loadedTareas.sort((a, b) => parseTaskDueDateToNumber(a.fechaEntrega) - parseTaskDueDateToNumber(b.fechaEntrega));
             setTareas(loadedTareas);
             
             // Cargar notas hermanas del mismo ambiente para el switcher
@@ -109,6 +127,7 @@ export function useNoteEditorViewModel(
         
         await db.sincronizarTareasDeNota(notaId, content);
         const loadedTareas = await db.obtenerTareasPorNota(notaId);
+        loadedTareas.sort((a, b) => parseTaskDueDateToNumber(a.fechaEntrega) - parseTaskDueDateToNumber(b.fechaEntrega));
         setTareas(loadedTareas);
         
         // Actualizar el título local de la nota
@@ -122,8 +141,9 @@ export function useNoteEditorViewModel(
 
     // Guardar cambios del Markdown (local y en cola de autoguardado a 1 minuto)
     const handleMarkdownChange = async (newVal: string) => {
-        setMarkdown(newVal);
-        lastMarkdownRef.current = newVal;
+        const processedVal = replaceLatexAccents(newVal);
+        setMarkdown(processedVal);
+        lastMarkdownRef.current = processedVal;
         setSavingStatus('unsaved');
         
         // Temporizador de 1 minuto para autoguardado (Debounce)
@@ -188,6 +208,16 @@ export function useNoteEditorViewModel(
         onBack();
     };
 
+    const handleEliminarNotaConfirmado = async () => {
+        if (!note) return;
+        try {
+            await db.eliminarNota(note.id);
+            onBack();
+        } catch (e) {
+            console.error('Error al eliminar nota desde editor:', e);
+        }
+    };
+
     // Atajos de teclado para la vista del editor
     useEffect(() => {
         ShortcutManager.registerGroup('noteEditorView', [
@@ -209,6 +239,17 @@ export function useNoteEditorViewModel(
                     toggleMode(); 
                 },
                 description: 'Alternar entre editor y tareas asociadas'
+            },
+
+            // Ctrl + K: Eliminar la nota actual
+            {
+                code: 'KeyK',
+                ctrlKey: true,
+                action: (e) => {
+                    e.preventDefault();
+                    setIsConfirmDeleteOpen(true);
+                },
+                description: 'Eliminar la nota actual'
             },
 
             // Escape o Alt + Left: Regresar
@@ -326,6 +367,9 @@ export function useNoteEditorViewModel(
         handleBack,
         switcher,
         notesInEnv,
-        isLineWrapping
+        isLineWrapping,
+        isConfirmDeleteOpen,
+        setIsConfirmDeleteOpen,
+        handleEliminarNotaConfirmado
     };
 }

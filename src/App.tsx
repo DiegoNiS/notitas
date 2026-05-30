@@ -26,6 +26,8 @@ function AppContent() {
 
   useEffect(() => {
     cargarCursos(); // Carga inicial
+    // Modo teclado activo por defecto al iniciar
+    document.body.classList.add('disable-mouse');
   }, []);
 
   // -- REGISTRO DE ATAJOS GLOBALES DE LA APP --
@@ -73,6 +75,9 @@ function AppContent() {
 
   return (
     <div className="app-container">
+      {/* Draggable header region for borderless window */}
+      <div className="app-drag-bar" data-tauri-drag-region />
+
       {/* Sidebar controla autónomamente su overlay */}
       <Sidebar 
         isOpen={isSidebarOpen} 

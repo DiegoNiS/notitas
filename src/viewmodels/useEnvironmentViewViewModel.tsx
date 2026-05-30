@@ -1,10 +1,9 @@
 // Ruta: src/viewmodels/useEnvironmentViewViewModel.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ShortcutManager } from '../keyboard/ShortcutManager';
-import { CursoDetalle, db, TareaDetail, Ambiente, Nota } from '../services/database';
+import { CursoDetalle, db, TareaDetail, Ambiente, Nota, parseTaskDueDateToNumber } from '../services/database';
 import { useCtrlTabSwitcher } from '../keyboard/useCtrlTabSwitcher';
-
-const lastFocusedCache: Record<string, string> = {};
+import { ShortcutConfig } from '../keyboard/types';
 
 export function useEnvironmentViewViewModel(
     curso: CursoDetalle | null,
@@ -15,9 +14,16 @@ export function useEnvironmentViewViewModel(
     const [tareas, setTareas] = useState<TareaDetail[]>([]);
     const [notas, setNotas] = useState<Nota[]>([]);
     const [ambiente, setAmbiente] = useState<Ambiente | null>(null);
-    const [activeTaskIndex, setActiveTaskIndex] = useState(0);
-    const [activeNoteIndex, setActiveNoteIndex] = useState(0);
+    const [focusedIndex, setFocusedIndex] = useState<number>(0);
     const [mode, setMode] = useState<'notes' | 'tasks'>('notes');
+
+    // Estados para el Spotlight (Ctrl + K) de notas
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [menuOptionIndex, setMenuOptionIndex] = useState(0);
+    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+    const [notaAEliminar, setNotaAEliminar] = useState<Nota | null>(null);
+
+    const OPCIONES_MENU = ['Abrir', 'Eliminar'];
 
     const cursoId = curso?.id || '';
 
@@ -36,9 +42,10 @@ export function useEnvironmentViewViewModel(
         }
     });
 
-    // Guardamos la referencia para el toggle
-    const stateRef = useRef({ mode });
-    stateRef.current = { mode };
+    // Reset focusedIndex when switching modes
+    useEffect(() => {
+        setFocusedIndex(0);
+    }, [mode]);
 
     // Cargar datos del ambiente y tareas/notas asociadas
     useEffect(() => {
@@ -56,6 +63,8 @@ export function useEnvironmentViewViewModel(
             ]);
 
             if (active) {
+                // Ordenar tareas por plazo (más cercano primero)
+                listTareas.sort((a, b) => parseTaskDueDateToNumber(a.fechaEntrega) - parseTaskDueDateToNumber(b.fechaEntrega));
                 setAmbiente(currentAmb);
                 setTareas(listTareas);
                 setNotas(listNotas);
@@ -75,87 +84,185 @@ export function useEnvironmentViewViewModel(
         const now = new Date();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         const dd = String(now.getDate()).padStart(2, '0');
-        const defaultTitle = `Nota de ${mm}/${dd}`;
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const defaultTitle = `Nota de ${mm}/${dd} ${hh}:${min}`;
         const newNoteId = await db.crearNota(cursoId, ambienteId, defaultTitle, `# ${defaultTitle}\n\n`);
         navigateTo({ type: 'editor', courseId: cursoId, ambienteId, notaId: newNoteId });
     };
 
-    // Alternar modo (Notas <-> Tareas)
-    const toggleMode = () => {
-        setMode(prev => {
-            const next = prev === 'notes' ? 'tasks' : 'notes';
-            
-            // Foco al primer elemento del nuevo modo activo
-            setTimeout(() => {
-                const prefix = next === 'notes' ? 'note' : 'task';
-                const cachedId = lastFocusedCache[`${cursoId}-${ambienteId}-${prefix}`] || `${prefix}-0`;
-                const element = document.getElementById(cachedId);
-                if (element) {
-                    element.focus();
-                }
-            }, 100);
+    const handleEjecutarOpcion = async () => {
+        if (focusedIndex === 0) {
+            handleCrearNota();
+            setIsMenuOpen(false);
+            return;
+        }
+        const nota = notas[focusedIndex - 1];
+        if (!nota) return;
 
-            return next;
-        });
+        const opcion = OPCIONES_MENU[menuOptionIndex];
+        if (opcion === 'Abrir') {
+            navigateTo({ type: 'editor', courseId: cursoId, ambienteId, notaId: nota.id });
+        } else if (opcion === 'Eliminar') {
+            setNotaAEliminar(nota);
+            setIsConfirmDeleteOpen(true);
+        }
+        setIsMenuOpen(false);
     };
+
+    const handleEliminarNotaConfirmado = async () => {
+        if (!notaAEliminar) return;
+        try {
+            await db.eliminarNota(notaAEliminar.id);
+            setNotaAEliminar(null);
+            
+            // Recargar
+            const listNotas = await db.obtenerNotasPorCursoAmbiente(cursoId, ambienteId);
+            const listTareas = await db.obtenerTareasPendientesPorCursoAmbiente(cursoId, ambienteId);
+            listTareas.sort((a, b) => parseTaskDueDateToNumber(a.fechaEntrega) - parseTaskDueDateToNumber(b.fechaEntrega));
+            setNotas(listNotas);
+            setTareas(listTareas);
+            setFocusedIndex(0);
+        } catch (e) {
+            console.error('Error al eliminar nota:', e);
+        }
+    };
+
+    const itemsCount = mode === 'notes' ? notas.length + 1 : tareas.length;
 
     // Registrar atajos de teclado globales para esta vista
     useEffect(() => {
-        ShortcutManager.registerGroup('environmentView', [
+        const shortcuts: ShortcutConfig[] = [
             { code: 'Escape', action: () => onBack(), description: 'Regresar a la pantalla anterior' },
             { code: 'ArrowLeft', altKey: true, action: (e) => { e.preventDefault(); onBack(); }, description: 'Regresar a la pantalla anterior' },
             { code: 'KeyN', ctrlKey: true, action: (e) => { e.preventDefault(); handleCrearNota(); }, description: 'Crear nueva nota' },
-            { 
-                code: 'Tab', 
-                altKey: true, 
-                action: (e) => { 
-                    e.preventDefault(); 
-                    toggleMode(); 
+            
+            // Cambiar entre pestañas
+            {
+                code: 'ArrowLeft',
+                action: (e) => {
+                    e.preventDefault();
+                    setMode('notes');
                 },
-                description: 'Alternar entre vista de notas y tareas'
+                description: 'Cambiar a la pestaña de Notas'
             },
-            { 
-                code: 'KeyM', 
-                altKey: true, 
-                action: (e) => { 
-                    e.preventDefault(); 
-                    toggleMode(); 
+            {
+                code: 'ArrowRight',
+                action: (e) => {
+                    e.preventDefault();
+                    setMode('tasks');
                 },
-                description: 'Alternar entre vista de notas y tareas'
+                description: 'Cambiar a la pestaña de Tareas Pendientes'
             }
-        ]);
+        ];
 
+        if (isMenuOpen) {
+            shortcuts.push(
+                {
+                    code: 'Escape',
+                    action: (e) => {
+                        e.preventDefault();
+                        setIsMenuOpen(false);
+                    },
+                    description: 'Cerrar el menú Spotlight'
+                },
+                {
+                    code: 'ArrowDown',
+                    action: (e) => {
+                        e.preventDefault();
+                        setMenuOptionIndex(prev => Math.min(prev + 1, OPCIONES_MENU.length - 1));
+                    },
+                    description: 'Bajar en las opciones del menú'
+                },
+                {
+                    code: 'ArrowUp',
+                    action: (e) => {
+                        e.preventDefault();
+                        setMenuOptionIndex(prev => Math.max(prev - 1, 0));
+                    },
+                    description: 'Subir en las opciones del menú'
+                },
+                {
+                    code: 'Enter',
+                    action: (e) => {
+                        e.preventDefault();
+                        handleEjecutarOpcion();
+                    },
+                    description: 'Ejecutar opción seleccionada'
+                }
+            );
+        } else {
+            // Shortcuts cuando el menú no está abierto
+            shortcuts.push(
+                {
+                    code: 'KeyK',
+                    ctrlKey: true,
+                    action: (e) => {
+                        e.preventDefault();
+                        if (mode === 'notes' && focusedIndex > 0) {
+                            setMenuOptionIndex(0);
+                            setIsMenuOpen(true);
+                        }
+                    },
+                    description: 'Abrir menú de opciones para la nota enfocada'
+                },
+                {
+                    codeMatcher: (code) => code === 'ArrowDown' || code === 'ArrowUp',
+                    action: (e) => {
+                        e.preventDefault();
+                        if (e.code === 'ArrowDown') {
+                            setFocusedIndex(prev => Math.min(prev + 1, itemsCount - 1));
+                        } else {
+                            setFocusedIndex(prev => Math.max(prev - 1, 0));
+                        }
+                    },
+                    description: 'Mover el foco arriba/abajo por la lista',
+                    keyDisplay: '↑ / ↓'
+                },
+                {
+                    code: 'Enter',
+                    action: (e) => {
+                        e.preventDefault();
+                        if (mode === 'notes') {
+                            if (focusedIndex === 0) {
+                                handleCrearNota();
+                            } else {
+                                const nota = notas[focusedIndex - 1];
+                                if (nota) {
+                                    navigateTo({ type: 'editor', courseId: cursoId, ambienteId, notaId: nota.id });
+                                }
+                            }
+                        } else {
+                            const task = tareas[focusedIndex];
+                            if (task && task.notaId) {
+                                navigateTo({ type: 'editor', courseId: cursoId, ambienteId, notaId: task.notaId });
+                            }
+                        }
+                    },
+                    description: 'Abrir elemento enfocado'
+                },
+                {
+                    code: 'Space',
+                    action: (e) => {
+                        if (mode === 'tasks') {
+                            e.preventDefault();
+                            const task = tareas[focusedIndex];
+                            if (task) {
+                                toggleTaskStatus(task);
+                            }
+                        }
+                    },
+                    description: 'Alternar estado de la tarea'
+                }
+            );
+        }
+
+        ShortcutManager.registerGroup('environmentView', shortcuts);
 
         return () => {
             ShortcutManager.unregisterGroup('environmentView');
         };
-    }, [onBack, cursoId, ambienteId]);
-
-    // Restaurar foco al montar o al cambiar de modo
-    useEffect(() => {
-        if (!cursoId || !ambienteId) return;
-
-        const timer = setTimeout(() => {
-            const currentPrefix = stateRef.current.mode === 'notes' ? 'note' : 'task';
-            const cacheKey = `${cursoId}-${ambienteId}-${currentPrefix}`;
-            const cachedId = lastFocusedCache[cacheKey] || `${currentPrefix}-0`;
-            const element = document.getElementById(cachedId);
-            if (element) {
-                element.focus();
-            }
-        }, 50);
-
-        return () => clearTimeout(timer);
-    }, [cursoId, ambienteId, mode, notas, tareas]);
-
-    // Guardar foco en el caché
-    const handleElementFocus = (id: string) => {
-        if (cursoId && ambienteId) {
-            const currentPrefix = stateRef.current.mode === 'notes' ? 'note' : 'task';
-            const cacheKey = `${cursoId}-${ambienteId}-${currentPrefix}`;
-            lastFocusedCache[cacheKey] = id;
-        }
-    };
+    }, [onBack, cursoId, ambienteId, mode, focusedIndex, isMenuOpen, menuOptionIndex, notas, tareas, itemsCount]);
 
     // Cambiar estado de una tarea
     const toggleTaskStatus = async (task: TareaDetail) => {
@@ -181,14 +288,21 @@ export function useEnvironmentViewViewModel(
         ambiente,
         mode,
         setMode,
-        toggleMode,
-        activeTaskIndex,
-        setActiveTaskIndex,
-        activeNoteIndex,
-        setActiveNoteIndex,
-        handleElementFocus,
+        focusedIndex,
+        setFocusedIndex,
         toggleTaskStatus,
         handleCrearNota,
-        switcher
+        switcher,
+        isMenuOpen,
+        setIsMenuOpen,
+        menuOptionIndex,
+        setMenuOptionIndex,
+        isConfirmDeleteOpen,
+        setIsConfirmDeleteOpen,
+        notaAEliminar,
+        setNotaAEliminar,
+        OPCIONES_MENU,
+        handleEjecutarOpcion,
+        handleEliminarNotaConfirmado
     };
 }

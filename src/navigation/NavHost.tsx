@@ -24,6 +24,7 @@ export function NavHost({ currentRoute, cursos, onRecargarCursos, navigateTo, na
                     cursos={cursos}
                     onRecargar={onRecargarCursos}
                     onSelectCurso={(id) => navigateTo({ type: 'course', courseId: id })}
+                    navigateTo={navigateTo}
                 />
             );
         case 'course': {
